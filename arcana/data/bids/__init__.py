@@ -1,1 +1,2 @@
-# Import all data stores and spaces in the namespace package here
+from .structure import Bids
+from .dataset import BidsDataset

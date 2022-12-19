@@ -1,1 +1,1 @@
-# Import all Analysis classes in the namespace package here
+from .tasks import bids_app

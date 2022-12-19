@@ -1,14 +1,14 @@
 from functools import reduce
 from operator import mul
-from arcana.core.utils.testing.fixtures.common import make_dataset, TestDatasetBlueprint
-from arcana.data.types.common import Text
-from arcana.data.spaces.medimage import Clinical
-from arcana.data.types.medimage import NiftiGzX
+from arcana.core.utils.testing.data import make_dataset, TestDatasetBlueprint
+from arcana.data.common import Text
+from arcana.data.medimage import Clinical
+from arcana.data.medimage import NiftiGzX
 from arcana.cli.xnat import cs_entrypoint
 from arcana.core.utils.serialize import ClassResolver
 from arcana.core.utils.misc import path2varname
 from arcana.core.utils.testing import show_cli_trace
-from arcana.deploy.common import PipelineImage
+from arcana.deploy.common import AppImage
 
 
 def test_bids_app_entrypoint(
@@ -89,7 +89,7 @@ def test_bids_app_entrypoint(
             "help_string": "dummy",
         }
 
-    image_spec = PipelineImage(
+    image_spec = AppImage(
         name="test_bids_app_entrypoint",
         version="1.0",
         build_iteration="1",

@@ -7,7 +7,11 @@ name = "arcana-bids"
 description = "Description for arcana-bids goes here"
 readme = "README.rst"
 requires-python = ">=3.8"
-dependencies = ["arcana >=2.0b"]
+dependencies = [
+    "arcana >=2.0b",
+    "arcana-common >= 0.1",
+    "arcana-medimage >= 0.1"
+]
 license = {file = "LICENSE"}
 authors = [{name = "YOUR-NAME", email = "YOUR-EMAIL"}]
 maintainers = [{name = "YOUR-NAME", email = "YOUR-EMAIL"}]
