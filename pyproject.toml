@@ -3,8 +3,8 @@ requires = ["flit_scm"]
 build-backend = "flit_scm:buildapi"
 
 [project]
-name = "arcana-TODO"
-description = "Description for arcana-TODO goes here"
+name = "arcana-bids"
+description = "Description for arcana-bids goes here"
 readme = "README.rst"
 requires-python = ">=3.8"
 dependencies = ["arcana >=2.0b"]
@@ -52,18 +52,18 @@ name = "arcana"
 [tool.flit.metadata]
 namespace = "arcana"
 namespace_packages = [
-    "analysis.TODO",
-    "cli.TODO",
-    "data.TODO",
-    "deploy.TODO",
-    "utils.TODO"
+    "analysis.bids",
+    "cli.bids",
+    "data.bids",
+    "deploy.bids",
+    "utils.bids"
 ]
 
 [tool.flit.sdist]
 exclude = [".gitignore"]
 
 [tool.setuptools_scm]
-write_to = "arcana/utils/TODO/_version.py"
+write_to = "arcana/utils/bids/_version.py"
 
 [tool.black]
 line-length = 88
