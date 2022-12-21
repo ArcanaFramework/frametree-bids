@@ -19,10 +19,10 @@ from pydra.engine.specs import (
 )
 from arcana.core.data.set import Dataset
 from arcana.core.data.type.base import DataType
-from arcana.data.spaces.medimage import Clinical
-from arcana.data.stores.bids.structure import JsonEdit
-from arcana.data.stores.bids.dataset import BidsDataset
-from arcana.exceptions import ArcanaUsageError
+from arcana.medimage.data import Clinical
+from arcana.bids.data.structure import JsonEdit
+from arcana.bids.data.dataset import BidsDataset
+from arcana.core.exceptions import ArcanaUsageError
 from arcana.core.utils.serialize import (
     ClassResolver,
     ObjectListConverter,
@@ -78,12 +78,12 @@ def bids_app(
         The inputs to be inserted into the BIDS dataset. Should be a list of tuples
         consisting of the the path the file/directory should be stored within a BIDS subject/session,
         e.g. anat/T1w, func/bold, and the DataFormat class it should be stored in, e.g.
-        arcana.data.types.bids.NiftiGzX.
+        arcana.bids.data.NiftiGzX.
     outputs : list[ty.Union[AppField, dict[str, str]]]
         The outputs to be extracted from the derivatives directory. Should be a list of tuples
         consisting of the the path the file/directory is saved by the app within a BIDS subject/session,
         e.g. freesurfer/recon-all, and the DataFormat class it is stored in, e.g.
-        arcana.data.types.common.Directory.
+        arcana.common.data.Directory.
     executable : str, optional
         Name of the executable within the image to run (i.e. the entrypoint of the image).
         Required when extending the base image and launching Arcana within it. Defaults to

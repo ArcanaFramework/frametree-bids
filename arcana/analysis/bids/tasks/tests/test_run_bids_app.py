@@ -1,14 +1,14 @@
 from functools import reduce
 from operator import mul
 from arcana.core.utils.testing.data import make_dataset, TestDatasetBlueprint
-from arcana.data.common import Text
+from arcana.common.data import Text
 from arcana.data.medimage import Clinical
 from arcana.data.medimage import NiftiGzX
-from arcana.cli.xnat import cs_entrypoint
+from arcana.bids.cli import bids_entrypoint
 from arcana.core.utils.serialize import ClassResolver
 from arcana.core.utils.misc import path2varname
 from arcana.core.utils.testing import show_cli_trace
-from arcana.deploy.common import AppImage
+from arcana.core.deploy import App
 
 
 def test_bids_app_entrypoint(
@@ -89,7 +89,7 @@ def test_bids_app_entrypoint(
             "help_string": "dummy",
         }
 
-    image_spec = AppImage(
+    image_spec = App(
         name="test_bids_app_entrypoint",
         version="1.0",
         build_iteration="1",
