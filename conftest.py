@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 from click.testing import CliRunner
 import docker
-from arcana.data.medimage import NiftiGzX
+from arcana.medimage.data import NiftiGzX
 from arcana.core.deploy.image.components import BaseImage
 # Set DEBUG logging for unittests
 
@@ -35,7 +35,6 @@ def cli_runner(catch_cli_exceptions):
 def work_dir():
     work_dir = tempfile.mkdtemp()
     return Path(work_dir)
-
 
 
 BIDS_VALIDATOR_DOCKER = "bids/validator:latest"
@@ -240,4 +239,3 @@ else:
 @pytest.fixture
 def catch_cli_exceptions():
     return CATCH_CLI_EXCEPTIONS
-

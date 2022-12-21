@@ -4,17 +4,17 @@ build-backend = "flit_scm:buildapi"
 
 [project]
 name = "arcana-bids"
-description = "Description for arcana-bids goes here"
+description = "An Arcana extension for interacting with Brain Imaging Structure (BIDS) datasets and associated \"Apps\""
 readme = "README.rst"
 requires-python = ">=3.8"
 dependencies = [
     "arcana >=2.0b",
-    "arcana-common >= 0.1",
-    "arcana-medimage >= 0.1"
+#    "arcana-common",
+#    "arcana-medimage"
 ]
 license = {file = "LICENSE"}
-authors = [{name = "YOUR-NAME", email = "YOUR-EMAIL"}]
-maintainers = [{name = "YOUR-NAME", email = "YOUR-EMAIL"}]
+authors = [{name = "Thomas G. Close", email = "tom.g.close@gmail.com"}]
+maintainers = [{name = "Thomas G. Close", email = "tom.g.close@gmail.com"}]
 keywords = ["arcana"]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
@@ -51,23 +51,13 @@ test = [
 ]
 
 [tool.flit.module]
-name = "arcana"
-
-[tool.flit.metadata]
-namespace = "arcana"
-namespace_packages = [
-    "analysis.bids",
-    "cli.bids",
-    "data.bids",
-    "deploy.bids",
-    "utils.bids"
-]
+name = "arcana.bids"
 
 [tool.flit.sdist]
 exclude = [".gitignore"]
 
 [tool.setuptools_scm]
-write_to = "arcana/utils/bids/_version.py"
+write_to = "arcana/bids/_version.py"
 
 [tool.black]
 line-length = 88

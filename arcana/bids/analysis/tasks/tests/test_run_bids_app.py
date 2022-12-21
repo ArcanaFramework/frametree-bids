@@ -2,13 +2,13 @@ from functools import reduce
 from operator import mul
 from arcana.core.utils.testing.data import make_dataset, TestDatasetBlueprint
 from arcana.common.data import Text
-from arcana.data.medimage import Clinical
-from arcana.data.medimage import NiftiGzX
-from arcana.bids.cli import bids_entrypoint
+from arcana.medimage.data import Clinical
+from arcana.medimage.data import NiftiGzX
+from arcana.bids.cli import app_entrypoint
 from arcana.core.utils.serialize import ClassResolver
 from arcana.core.utils.misc import path2varname
 from arcana.core.utils.testing import show_cli_trace
-from arcana.core.deploy import App
+from arcana.common.deploy import App
 
 
 def test_bids_app_entrypoint(
@@ -108,7 +108,7 @@ def test_bids_app_entrypoint(
     )
     image_spec.save(spec_path)
 
-    result = cli_runner(cs_entrypoint, args)
+    result = cli_runner(app_entrypoint, args)
     assert result.exit_code == 0, show_cli_trace(result)
     # Add source column to saved dataset
     for fname in ["file1", "file2"]:

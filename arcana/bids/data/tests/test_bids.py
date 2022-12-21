@@ -9,10 +9,10 @@ import shutil
 from dataclasses import dataclass
 import pytest
 import docker
-from arcana import __version__
-from arcana.data.types import NiftiX
+from arcana.core import __version__
+from arcana.medimage.data import NiftiX
 from arcana.bids.data import BidsDataset
-from arcana.analysis.tasks.bids.app import bids_app, BidsInput, BidsOutput
+from arcana.bids.analysis.tasks.app import bids_app, BidsInput, BidsOutput
 from arcana.common.data import Text, Directory
 from arcana.medimage.data import NiftiGzX, NiftiGzXFslgrad
 

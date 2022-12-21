@@ -3,8 +3,7 @@ import json
 import typing as ty
 from dataclasses import dataclass
 from pathlib import Path
-from arcana import __version__
-from arcana.__about__ import PACKAGE_NAME, CODE_URL
+from arcana.core import __version__, PACKAGE_NAME, CODE_URL
 from arcana.core.data.set import Dataset
 from arcana.medimage.data import Clinical
 from arcana.core.exceptions import ArcanaError, ArcanaEmptyDatasetError
