@@ -1,5 +1,6 @@
 from functools import reduce
 from operator import mul
+import pytest
 from arcana.core.utils.testing.data import make_dataset, TestDatasetBlueprint
 from arcana.common.data import Text
 from arcana.medimage.data import Clinical
@@ -11,6 +12,7 @@ from arcana.core.utils.testing import show_cli_trace
 from arcana.common.deploy import App
 
 
+@pytest.mark.xfail(reason="Still implementing BIDS app entrypoint")
 def test_bids_app_entrypoint(
     mock_bids_app_executable, cli_runner, nifti_sample_dir, work_dir
 ):
