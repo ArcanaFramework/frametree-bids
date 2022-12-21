@@ -3,6 +3,7 @@ import logging
 import pytest
 import tempfile
 from pathlib import Path
+from tempfile import mkdtemp
 from click.testing import CliRunner
 import docker
 from arcana.medimage.data import NiftiGzX
@@ -35,6 +36,16 @@ def cli_runner(catch_cli_exceptions):
 def work_dir():
     work_dir = tempfile.mkdtemp()
     return Path(work_dir)
+
+
+@pytest.fixture(scope="session")
+def build_cache_dir():
+    return Path(mkdtemp())
+
+
+@pytest.fixture(scope="session")
+def nifti_sample_dir(pkg_dir):
+    return pkg_dir / "test-data" / "nifti"
 
 
 BIDS_VALIDATOR_DOCKER = "bids/validator:latest"
