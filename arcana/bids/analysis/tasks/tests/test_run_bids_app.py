@@ -67,7 +67,6 @@ def test_bids_app_entrypoint(
     for path, (datatype, _) in blueprint.expected_formats.items():
         format_str = ClassResolver.tostr(datatype)
         varname = path2varname(path)
-        args.extend(["--input", varname, varname])
         inputs_config[varname] = {
             "configuration": {
                 "path": path,
@@ -80,7 +79,6 @@ def test_bids_app_entrypoint(
     for path, _, datatype, _ in blueprint.derivatives:
         format_str = ClassResolver.tostr(datatype)
         varname = path2varname(path)
-        args.extend(["--output", varname, varname])
         outputs_config[varname] = {
             "configuration": {
                 "path": path,
@@ -97,7 +95,7 @@ def test_bids_app_entrypoint(
         authors=[{"name": "Some One", "email": "some.one@an.email.org"}],
         info_url="http://concatenate.readthefakedocs.io",
         command={
-            "task": "arcana.analysis.tasks.bids.app:bids_app",
+            "task": "arcana.bids.analysis.tasks.app:bids_app",
             "row_frequency": "medimage:Clinical[session]",
             "inputs": inputs_config,
             "outputs": outputs_config,

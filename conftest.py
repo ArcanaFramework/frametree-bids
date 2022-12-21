@@ -21,6 +21,8 @@ formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(messag
 sch.setFormatter(formatter)
 logger.addHandler(sch)
 
+PKG_DIR = Path(__file__).parent
+
 
 @pytest.fixture
 def cli_runner(catch_cli_exceptions):
@@ -36,6 +38,11 @@ def cli_runner(catch_cli_exceptions):
 def work_dir():
     work_dir = tempfile.mkdtemp()
     return Path(work_dir)
+
+
+@pytest.fixture(scope="session")
+def pkg_dir():
+    return PKG_DIR
 
 
 @pytest.fixture(scope="session")
@@ -218,7 +225,7 @@ def bids_command_spec(mock_bids_app_executable):
     }
 
     return {
-        "task": "arcana.analysis.tasks.bids.app:bids_app",
+        "task": "arcana.bids.analysis.tasks.app:bids_app",
         "inputs": inputs,
         "outputs": outputs,
         "row_frequency": "session",
