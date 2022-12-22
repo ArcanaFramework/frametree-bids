@@ -13,7 +13,7 @@ from arcana.core import __version__
 from arcana.medimage.data import NiftiX
 from arcana.bids.data import BidsDataset
 from arcana.bids.analysis.tasks.app import bids_app, BidsInput, BidsOutput
-from arcana.common.data import Text, Directory
+from arcana.dirtree.data import Text, Directory
 from arcana.medimage.data import NiftiGzX, NiftiGzXFslgrad
 
 

@@ -8,7 +8,7 @@ description = "An Arcana extension for interacting with Brain Imaging Structure 
 readme = "README.rst"
 requires-python = ">=3.8"
 dependencies = [
-    "arcana >=2.0b",
+    "arcana-core >=2.0b2",
 #    "arcana-common",
 #    "arcana-medimage"
 ]

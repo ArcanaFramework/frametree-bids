@@ -6,7 +6,7 @@ import attrs
 from dataclasses import dataclass
 import jq
 from pathlib import Path
-from arcana.common.data import FileSystem
+from arcana.dirtree.data import FileSystem
 from arcana.core.data.type.base import FileGroup
 from arcana.core.exceptions import ArcanaUsageError, ArcanaEmptyDatasetError
 

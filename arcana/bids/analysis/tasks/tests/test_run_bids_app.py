@@ -2,14 +2,14 @@ from functools import reduce
 from operator import mul
 import pytest
 from arcana.core.utils.testing.data import make_dataset, TestDatasetBlueprint
-from arcana.common.data import Text
+from arcana.dirtree.data import Text
 from arcana.medimage.data import Clinical
 from arcana.medimage.data import NiftiGzX
 from arcana.bids.cli import app_entrypoint
 from arcana.core.utils.serialize import ClassResolver
 from arcana.core.utils.misc import path2varname
 from arcana.core.utils.testing import show_cli_trace
-from arcana.common.deploy import App
+from arcana.dirtree.deploy import App
 
 
 @pytest.mark.xfail(reason="Still implementing BIDS app entrypoint")
