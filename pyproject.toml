@@ -8,9 +8,10 @@ description = "An Arcana extension for interacting with Brain Imaging Structure 
 readme = "README.rst"
 requires-python = ">=3.8"
 dependencies = [
-    "arcana-core >=2.0b2",
-#    "arcana-common",
-#    "arcana-medimage"
+    "arcana-core >=0.8",
+    "arcana-dirtree >=0.1",
+    "fileformats-common >=0.1",
+    "fileformats-medimage >=0.1",
 ]
 license = {file = "LICENSE"}
 authors = [{name = "Thomas G. Close", email = "tom.g.close@gmail.com"}]

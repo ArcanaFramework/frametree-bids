@@ -6,8 +6,8 @@ import attrs
 from dataclasses import dataclass
 import jq
 from pathlib import Path
-from arcana.dirtree.data import FileSystem
-from arcana.core.data.type.base import FileGroup
+from arcana.dirtree.data import DirTree
+from fileformats.core import FileGroup
 from arcana.core.exceptions import ArcanaUsageError, ArcanaEmptyDatasetError
 
 
@@ -42,7 +42,7 @@ class JsonEdit:
 
 
 @attrs.define
-class Bids(FileSystem):
+class Bids(DirTree):
     """Repository for working with data stored on the file-system in BIDS format
 
     Parameters

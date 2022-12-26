@@ -1,15 +1,16 @@
 from functools import reduce
 from operator import mul
 import pytest
-from arcana.core.utils.testing.data import make_dataset, TestDatasetBlueprint
-from arcana.dirtree.data import Text
-from arcana.medimage.data import Clinical
-from arcana.medimage.data import NiftiGzX
+from fileformats.common import Text
+from arcana.core.data.store import TestDatasetBlueprint
+from arcana.core.data.space import Clinical
+from fileformats.medimage import NiftiGzX
 from arcana.bids.cli import app_entrypoint
 from arcana.core.utils.serialize import ClassResolver
 from arcana.core.utils.misc import path2varname
 from arcana.core.utils.testing import show_cli_trace
-from arcana.dirtree.deploy import App
+from arcana.core.deploy import App
+from arcana.bids.data import Bids
 
 
 @pytest.mark.xfail(reason="Still implementing BIDS app entrypoint")
@@ -30,7 +31,7 @@ def test_bids_app_entrypoint(
             "dwi/dwi.bvec",
             "dwi/dwi.bval",
         ],
-        expected_formats={
+        expected_datatypes={
             "anat/T1w": (NiftiGzX, ["T1w.nii.gz", "T1w.json"]),
             "anat/T2w": (NiftiGzX, ["T2w.nii.gz", "T2w.json"]),
             "dwi/dwi": (NiftiGzX, ["dwi.nii.gz", "dwi.json", "dwi.bvec", "dwi.bval"]),
@@ -43,8 +44,8 @@ def test_bids_app_entrypoint(
 
     dataset_path = work_dir / "bids-dataset"
 
-    dataset = make_dataset(
-        dataset_path=dataset_path, blueprint=blueprint, source_data=nifti_sample_dir
+    dataset = Bids.make_test_dataset(
+        dataset_id=dataset_path, blueprint=blueprint, source_data=nifti_sample_dir
     )
 
     spec_path = work_dir / "spec.yaml"
@@ -66,7 +67,7 @@ def test_bids_app_entrypoint(
         ",".join([str(ln) for ln in blueprint.hierarchy]),
     ]
     inputs_config = {}
-    for path, (datatype, _) in blueprint.expected_formats.items():
+    for path, (datatype, _) in blueprint.expected_datatypes.items():
         format_str = ClassResolver.tostr(datatype)
         varname = path2varname(path)
         inputs_config[varname] = {

@@ -6,7 +6,7 @@ from pathlib import Path
 from tempfile import mkdtemp
 from click.testing import CliRunner
 import docker
-from arcana.medimage.data import NiftiGzX
+from fileformats.medimage import NiftiGzX
 from arcana.core.deploy.image.components import BaseImage
 # Set DEBUG logging for unittests
 

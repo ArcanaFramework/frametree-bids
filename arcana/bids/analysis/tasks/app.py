@@ -18,8 +18,8 @@ from pydra.engine.specs import (
     ShellOutSpec,
 )
 from arcana.core.data.set import Dataset
-from arcana.core.data.type.base import DataType
-from arcana.medimage.data import Clinical
+from fileformats.core import FileGroup
+from arcana.core.data.space import Clinical
 from arcana.bids.data.structure import JsonEdit
 from arcana.bids.data.dataset import BidsDataset
 from arcana.core.exceptions import ArcanaUsageError
@@ -37,14 +37,14 @@ class BidsInput:
 
     name: str
     path: str
-    datatype: DataType = attrs.field(converter=ClassResolver(DataType))
+    datatype: FileGroup = attrs.field(converter=ClassResolver(FileGroup))
 
 
 @attrs.define(kw_only=True)
 class BidsOutput:
 
     name: str
-    datatype: DataType = attrs.field(converter=ClassResolver(DataType))
+    datatype: FileGroup = attrs.field(converter=ClassResolver(FileGroup))
     path: str = None
 
 

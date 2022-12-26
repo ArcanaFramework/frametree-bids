@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from arcana.core import __version__, PACKAGE_NAME, CODE_URL
 from arcana.core.data.set import Dataset
-from arcana.medimage.data import Clinical
+from arcana.core.data.space import Clinical
 from arcana.core.exceptions import ArcanaError, ArcanaEmptyDatasetError
 from .structure import Bids
 
