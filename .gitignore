@@ -20,4 +20,4 @@ __pycache__
 .vscode
 *.egg-info
 ~*
-/arcana/utils/xnat/_version.py
+/arcana/bids/_version.py
