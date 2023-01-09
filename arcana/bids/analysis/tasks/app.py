@@ -18,7 +18,7 @@ from pydra.engine.specs import (
     ShellOutSpec,
 )
 from arcana.core.data.set import Dataset
-from fileformats.core import FileGroup
+from fileformats.core import FileSet
 from arcana.core.data.space import Clinical
 from arcana.bids.data.structure import JsonEdit
 from arcana.bids.data.dataset import BidsDataset
@@ -37,14 +37,14 @@ class BidsInput:
 
     name: str
     path: str
-    datatype: FileGroup = attrs.field(converter=ClassResolver(FileGroup))
+    datatype: FileSet = attrs.field(converter=ClassResolver(FileSet))
 
 
 @attrs.define(kw_only=True)
 class BidsOutput:
 
     name: str
-    datatype: FileGroup = attrs.field(converter=ClassResolver(FileGroup))
+    datatype: FileSet = attrs.field(converter=ClassResolver(FileSet))
     path: str = None
 
 
