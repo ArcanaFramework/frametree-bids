@@ -117,6 +117,6 @@ def test_bids_app_entrypoint(
         assert len(sink) == reduce(mul, blueprint.dim_lengths)
         for item in sink:
             item.get(assume_exists=True)
-            with open(item.fs_path) as f:
+            with open(item.fspath) as f:
                 contents = f.read()
             assert contents == fname + "\n"

@@ -195,9 +195,9 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
     for sf_name, sf_bp in bp.source_niftis.items():
         dataset.add_sink(sf_name, datatype=NiftiX, path=sf_bp.path)
 
-        nifti_fs_path = work_dir / (sf_name + ".nii")
+        nifti_fspath = work_dir / (sf_name + ".nii")
         # dummy_nifti_gz = dummy_nifti + '.gz'
-        json_fs_path = work_dir / (sf_name + ".json")
+        json_fspath = work_dir / (sf_name + ".json")
 
         # Create a random Nifti file to satisfy BIDS parsers
         hdr = nb.Nifti1Header()
@@ -211,17 +211,17 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
                 hdr.get_best_affine(),
                 header=hdr,
             ),
-            nifti_fs_path,
+            nifti_fspath,
         )
 
-        with open(json_fs_path, "w") as f:
+        with open(json_fspath, "w") as f:
             json.dump(sf_bp.orig_side_car, f)
 
         # Get single item in dataset
         item = dataset[sf_name][("ses-1", "sub-1")]
 
         # Put file paths in item
-        item.put(nifti_fs_path, json_fs_path)
+        item.put(nifti_fspath, json_fspath)
 
     # Check edited JSON matches reference
     for sf_name, sf_bp in bp.source_niftis.items():
