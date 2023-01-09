@@ -182,7 +182,7 @@ class Bids(DirTree):
             if "TaskName" not in dct:
                 dct["TaskName"] = match.group(1)
         # Get dictionary containing file paths for all items in the same row
-        # as the file-group so they can be used in the edits using Python
+        # as the file-set so they can be used in the edits using Python
         # string templating
         col_paths = {}
         for col_name, item in fileset.row.items():
