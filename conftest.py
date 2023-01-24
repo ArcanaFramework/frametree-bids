@@ -6,7 +6,7 @@ from pathlib import Path
 from tempfile import mkdtemp
 from click.testing import CliRunner
 import docker
-from fileformats.medimage import NiftiGzX
+from fileformats.medimage import Nifti_Gzip_Bids
 from arcana.core.deploy.image.components import BaseImage
 # Set DEBUG logging for unittests
 
@@ -87,9 +87,9 @@ echo 'file2' > $OUTPUTS_DIR/sub-${{SUBJ_ID}}_file2.txt
 def mock_bids_app_script():
     file_tests = ""
     for inpt_path, datatype in [
-        ("anat/T1w", NiftiGzX),
-        ("anat/T2w", NiftiGzX),
-        ("dwi/dwi", NiftiGzX),
+        ("anat/T1w", Nifti_Gzip_Bids),
+        ("anat/T2w", Nifti_Gzip_Bids),
+        ("dwi/dwi", Nifti_Gzip_Bids),
     ]:
         subdir, suffix = inpt_path.split("/")
         file_tests += f"""
@@ -188,21 +188,21 @@ def bids_command_spec(mock_bids_app_executable):
             "configuration": {
                 "path": "anat/T1w",
             },
-            "datatype": "medimage:NiftiGzX",
+            "datatype": "medimage:Nifti_Gzip_Bids",
             "help_string": "T1-weighted image",
         },
         "T2w": {
             "configuration": {
                 "path": "anat/T2w",
             },
-            "datatype": "medimage:NiftiGzX",
+            "datatype": "medimage:Nifti_Gzip_Bids",
             "help_string": "T2-weighted image",
         },
         "DWI": {
             "configuration": {
                 "path": "dwi/dwi",
             },
-            "datatype": "medimage:NiftiGzXFslgrad",
+            "datatype": "medimage:Nifti_Gzip_Bids_Fslgrad",
             "help_string": "DWI-weighted image",
         },
     }

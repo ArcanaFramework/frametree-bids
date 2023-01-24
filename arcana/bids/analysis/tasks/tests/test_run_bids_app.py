@@ -1,10 +1,10 @@
 from functools import reduce
 from operator import mul
 import pytest
-from fileformats.common import Text
+from fileformats.text import Plain as Text
 from arcana.core.data.store import TestDatasetBlueprint
 from arcana.core.data.space import Clinical
-from fileformats.medimage import NiftiGzX
+from fileformats.medimage import Nifti_Gzip_Bids
 from arcana.bids.cli import app_entrypoint
 from arcana.core.utils.serialize import ClassResolver
 from arcana.core.utils.misc import path2varname
@@ -32,9 +32,9 @@ def test_bids_app_entrypoint(
             "dwi/dwi.bval",
         ],
         expected_datatypes={
-            "anat/T1w": (NiftiGzX, ["T1w.nii.gz", "T1w.json"]),
-            "anat/T2w": (NiftiGzX, ["T2w.nii.gz", "T2w.json"]),
-            "dwi/dwi": (NiftiGzX, ["dwi.nii.gz", "dwi.json", "dwi.bvec", "dwi.bval"]),
+            "anat/T1w": (Nifti_Gzip_Bids, ["T1w.nii.gz", "T1w.json"]),
+            "anat/T2w": (Nifti_Gzip_Bids, ["T2w.nii.gz", "T2w.json"]),
+            "dwi/dwi": (Nifti_Gzip_Bids, ["dwi.nii.gz", "dwi.json", "dwi.bvec", "dwi.bval"]),
         },
         derivatives=[
             ("file1", Clinical.session, Text, ["file1.txt"]),

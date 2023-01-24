@@ -10,10 +10,10 @@ from dataclasses import dataclass
 import pytest
 import docker
 from arcana.core import __version__
-from fileformats.medimage import NiftiX, NiftiGzX, NiftiGzXFslgrad
+from fileformats.medimage import NiftiX, Nifti_Gzip_Bids, Nifti_Gzip_Bids_Fslgrad
 from arcana.bids.data import BidsDataset
 from arcana.bids.analysis.tasks.app import bids_app, BidsInput, BidsOutput
-from fileformats.common import Text, Directory
+from fileformats.text import Plain as Text, Directory
 
 
 MOCK_BIDS_APP_NAME = "mockapp"
@@ -234,9 +234,9 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
 
 
 BIDS_INPUTS = [
-    BidsInput(name="T1w", path="anat/T1w", datatype=NiftiGzX),
-    BidsInput(name="T2w", path="anat/T2w", datatype=NiftiGzX),
-    BidsInput(name="dwi", path="dwi/dwi", datatype=NiftiGzXFslgrad),
+    BidsInput(name="T1w", path="anat/T1w", datatype=Nifti_Gzip_Bids),
+    BidsInput(name="T2w", path="anat/T2w", datatype=Nifti_Gzip_Bids),
+    BidsInput(name="dwi", path="dwi/dwi", datatype=Nifti_Gzip_Bids_Fslgrad),
 ]
 BIDS_OUTPUTS = [
     BidsOutput(name="whole_dir", datatype=Directory),  # whole derivative directory
@@ -280,9 +280,9 @@ def test_run_bids_app_naked(
 ):
 
     kwargs = {}
-    # INPUTS = [Input('anat/T1w', NiftiGzX),
-    #           Input('anat/T2w', NiftiGzX),
-    #           Input('dwi/dwi', NiftiGzXFslgrad)]
+    # INPUTS = [Input('anat/T1w', Nifti_Gzip_Bids),
+    #           Input('anat/T2w', Nifti_Gzip_Bids),
+    #           Input('dwi/dwi', Nifti_Gzip_Bids_Fslgrad)]
     # OUTPUTS = [Output('', Directory),  # whole derivative directory
     #            Output('file1', Text),
     #            Output('file2', Text)]
