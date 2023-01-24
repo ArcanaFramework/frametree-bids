@@ -10,10 +10,11 @@ from dataclasses import dataclass
 import pytest
 import docker
 from arcana.core import __version__
-from fileformats.medimage import NiftiX, Nifti_Gzip_Bids, Nifti_Gzip_Bids_Fslgrad
+from fileformats.medimage import Nifti_Bids, Nifti_Gzip_Bids, Nifti_Gzip_Bids_Fslgrad
 from arcana.bids.data import BidsDataset
 from arcana.bids.analysis.tasks.app import bids_app, BidsInput, BidsOutput
-from fileformats.text import Plain as Text, Directory
+from fileformats.text import Plain as Text
+from fileformats.generic import Directory
 
 
 MOCK_BIDS_APP_NAME = "mockapp"
@@ -45,7 +46,7 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
 
     dataset.save_metadata()
 
-    dataset.add_sink("t1w", datatype=NiftiX, path="anat/T1w")
+    dataset.add_sink("t1w", datatype=Nifti_Bids, path="anat/T1w")
 
     dummy_nifti = work_dir / "t1w.nii"
     # dummy_nifti_gz = dummy_nifti + '.gz'
@@ -86,13 +87,13 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
     assert bids_success_str in result
 
     reloaded = BidsDataset.load(path)
-    reloaded.add_sink("t1w", datatype=NiftiX, path="anat/T1w")
+    reloaded.add_sink("t1w", datatype=Nifti_Bids, path="anat/T1w")
 
     assert dataset == reloaded
 
 
 @dataclass
-class SourceNiftiXBlueprint:
+class SourceNifti_BidsBlueprint:
     """The blueprint for the source nifti files"""
 
     path: str  # BIDS path for Nift
@@ -103,7 +104,7 @@ class SourceNiftiXBlueprint:
 @dataclass
 class JsonEditBlueprint:
 
-    source_niftis: ty.Dict[str, SourceNiftiXBlueprint]
+    source_niftis: ty.Dict[str, SourceNifti_BidsBlueprint]
     path_re: str  # regular expression for the paths to edit
     jq_script: str  # jq script
 
@@ -113,7 +114,7 @@ JSON_EDIT_TESTS = {
         path_re="anat/T.*w",
         jq_script=".a.b += 4",
         source_niftis={
-            "t1w": SourceNiftiXBlueprint(
+            "t1w": SourceNifti_BidsBlueprint(
                 path="anat/T1w",
                 orig_side_car={"a": {"b": 1.0}},
                 edited_side_car={"a": {"b": 5.0}},
@@ -124,7 +125,7 @@ JSON_EDIT_TESTS = {
         path_re="anat/T.*w",
         jq_script=".a.b += 4 | .a.c[] *= 2",
         source_niftis={
-            "t1w": SourceNiftiXBlueprint(
+            "t1w": SourceNifti_BidsBlueprint(
                 path="anat/T1w",
                 orig_side_car={"a": {"b": 1.0, "c": [2, 4, 6]}},
                 edited_side_car={"a": {"b": 5.0, "c": [4, 8, 12]}},
@@ -135,22 +136,22 @@ JSON_EDIT_TESTS = {
         path_re="fmap/.*",
         jq_script='.IntendedFor = "{bold}"',
         source_niftis={
-            "bold": SourceNiftiXBlueprint(
+            "bold": SourceNifti_BidsBlueprint(
                 path="func/task-rest_bold",
                 orig_side_car={},
                 edited_side_car={"TaskName": "rest"},
             ),
-            "fmap_mag1": SourceNiftiXBlueprint(
+            "fmap_mag1": SourceNifti_BidsBlueprint(
                 path="fmap/magnitude1",
                 orig_side_car={},
                 edited_side_car={"IntendedFor": "func/sub-1_ses-1_task-rest_bold.nii"},
             ),
-            "fmap_mag2": SourceNiftiXBlueprint(
+            "fmap_mag2": SourceNifti_BidsBlueprint(
                 path="fmap/magnitude2",
                 orig_side_car={},
                 edited_side_car={"IntendedFor": "func/sub-1_ses-1_task-rest_bold.nii"},
             ),
-            "fmap_phasediff": SourceNiftiXBlueprint(
+            "fmap_phasediff": SourceNifti_BidsBlueprint(
                 path="fmap/phasediff",
                 orig_side_car={},
                 edited_side_car={"IntendedFor": "func/sub-1_ses-1_task-rest_bold.nii"},
@@ -193,7 +194,7 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
     dataset.save_metadata()
 
     for sf_name, sf_bp in bp.source_niftis.items():
-        dataset.add_sink(sf_name, datatype=NiftiX, path=sf_bp.path)
+        dataset.add_sink(sf_name, datatype=Nifti_Bids, path=sf_bp.path)
 
         nifti_fspath = work_dir / (sf_name + ".nii")
         # dummy_nifti_gz = dummy_nifti + '.gz'
