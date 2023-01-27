@@ -58,7 +58,7 @@ class Bids(DirTree):
         factory=list, converter=JsonEdit.attr_converter
     )
 
-    alias = "bids"
+    name: str = "bids"
 
     def find_rows(self, dataset):
         """
