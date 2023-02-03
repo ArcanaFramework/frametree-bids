@@ -7,9 +7,12 @@ from dataclasses import dataclass
 import jq
 from pathlib import Path
 from arcana.file_system import DirTree
-from fileformats.core import FileSet
+from fileformats.core import FileSet, Field
+from fileformats.serialization import Json
 from arcana.core.exceptions import ArcanaUsageError, ArcanaEmptyDatasetError
-
+from arcana.core.data.set import DataTree
+from arcana.core.data.entry import DataEntry
+from arcana.core.data.row import DataRow
 
 logger = logging.getLogger("arcana")
 
@@ -60,7 +63,7 @@ class Bids(DirTree):
 
     name: str = "bids"
 
-    def find_rows(self, dataset):
+    def populate_tree(self, tree: DataTree):
         """
         Find all rows within the dataset stored in the store and
         construct the data tree within the dataset
@@ -72,37 +75,37 @@ class Bids(DirTree):
         """
 
         try:
-            dataset.load_metadata()
+            tree.dataset.load_metadata()
         except ArcanaEmptyDatasetError:
             return
 
-        for subject_id, participant in dataset.participants.items():
+        for subject_id, participant in tree.dataset.participants.items():
             try:
                 explicit_ids = {"group": participant["group"]}
             except KeyError:
                 explicit_ids = {}
-            if dataset.is_multi_session():
-                for sess_id in (dataset.root_dir / subject_id).iterdir():
-                    dataset.add_leaf([subject_id, sess_id], explicit_ids=explicit_ids)
+            if tree.dataset.is_multi_session():
+                for sess_id in (tree.dataset.root_dir / subject_id).iterdir():
+                    tree.add_leaf([subject_id, sess_id], explicit_ids=explicit_ids)
             else:
-                dataset.add_leaf([subject_id], explicit_ids=explicit_ids)
+                tree.add_leaf([subject_id], explicit_ids=explicit_ids)
 
-    def find_cells(self, row):
+    def populate_row(self, row: DataRow):
         rel_session_path = self.row_path(row)
         root_dir = row.dataset.root_dir
         session_path = root_dir / rel_session_path
         session_path.mkdir(exist_ok=True)
         for modality_dir in session_path.iterdir():
-            self.find_cells_from_dir(modality_dir, row)
+            self.add_entries_from_dir(modality_dir, row)
         deriv_dir = root_dir / "derivatives"
         if deriv_dir.exists():
             for pipeline_dir in deriv_dir.iterdir():
-                self.find_cells_from_dir(pipeline_dir / rel_session_path, row)
+                self.add_entries_from_dir(pipeline_dir / rel_session_path, row)
 
-    def fileset_stem_path(self, fileset):
-        row = fileset.row
+    def get_fileset_path(self, entry: DataEntry) -> Path:
+        row = entry.row
         fspath = self.root_dir(row)
-        parts = fileset.path.split("/")
+        parts = entry.id.split("/")
         if parts[-1] == "":
             parts = parts[:-1]
         if parts[0] == "derivatives":
@@ -110,10 +113,10 @@ class Bids(DirTree):
                 raise ArcanaUsageError(
                     "Paths should have another part after 'derivatives'"
                 )
-            elif len(parts) == 2 and not fileset.is_dir:
+            elif len(parts) == 2 and not entry.datatype.is_dir:
                 raise ArcanaUsageError(
                     "Single-level derivative paths must be of type directory "
-                    f"({fileset.path}: {fileset.datatype})"
+                    f"({entry.id}: {entry.datatype.mime_like})"
                 )
             # append the first to parts of the path before the row ID (e.g. sub-01/ses-02)
             fspath = fspath.joinpath(*parts[:2])
@@ -128,36 +131,34 @@ class Bids(DirTree):
             fspath /= fname
         return fspath
 
-    def fields_json_path(self, field):
-        parts = field.path.split("/")
+    def get_fields_path(self, entry: DataEntry) -> Path:
+        parts = entry.id.split("/")
         if parts[0] != "derivatives":
             assert False, "Non-derivative fields should be taken from participants.tsv"
         return (
-            field.row.dataset.root_dir.joinpath(parts[:2])
-            / self.row_path(field.row)
+            entry.row.dataset.root_dir.joinpath(parts[:2])
+            / self.row_path(entry.row)
             / self.FIELDS_FNAME
         )
 
-    def get_field_val(self, field):
-        row = field.row
+    def get_field(self, entry: DataEntry) -> Field:
+        row = entry.row
         dataset = row.dataset
-        if field.name in dataset.participant_attrs:
-            val = dataset.participants[row.ids["subject"]]
+        if entry.id in dataset.participant_attrs:
+            val = entry.datatype(dataset.participants[row.ids["subject"]])
         else:
-            val = super().get_field_val(field)
+            val = super().get_field(entry)
         return val
 
-    def put_fileset_paths(self, fileset: FileSet, fspaths: ty.Iterable[Path]):
+    def put_fileset(self, fileset: FileSet, entry: DataEntry) -> FileSet:
+        stored_fileset = super().put_fileset(fileset, entry)
+        if hasattr(stored_fileset, "side_car") and isinstance(stored_fileset.side_car, Json):
+            # Ensure TaskName field is present in the JSON side-car if task
+            # is in the filename
+            self._edit_side_car(fileset)
+        return stored_fileset
 
-        stored_paths = super().put_fileset_paths(fileset, fspaths)
-        for fspath in stored_paths:
-            if fspath.suffix == ".json":
-                # Ensure TaskName field is present in the JSON side-car if task
-                # is in the filename
-                self._edit_json(fileset, fspath)
-        return stored_paths
-
-    def _edit_json(self, fileset: FileSet, fspath: str):
+    def _edit_side_car(self, fileset: FileSet):
         """Edit JSON files as they are written to manually modify the JSON
         generated by the dcm2niix where required
 
@@ -172,7 +173,7 @@ class Bids(DirTree):
             if dct is not None:
                 return dct
             else:
-                with open(fspath) as f:
+                with open(fileset.side_car) as f:
                     return json.load(f)
 
         # Ensure there is a value for TaskName for files that include 'task-taskname'
@@ -197,7 +198,7 @@ class Bids(DirTree):
                 dct = jq.compile(jq_expr).input(lazy_load_json()).first()
         # Write dictionary back to file if it has been loaded
         if dct is not None:
-            with open(fspath, "w") as f:
+            with open(fileset.side_car, "w") as f:
                 json.dump(dct, f)
 
 
