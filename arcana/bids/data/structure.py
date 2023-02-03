@@ -6,7 +6,7 @@ import attrs
 from dataclasses import dataclass
 import jq
 from pathlib import Path
-from arcana.dirtree import DirTree
+from arcana.file_system import DirTree
 from fileformats.core import FileSet
 from arcana.core.exceptions import ArcanaUsageError, ArcanaEmptyDatasetError
 
@@ -87,17 +87,17 @@ class Bids(DirTree):
             else:
                 dataset.add_leaf([subject_id], explicit_ids=explicit_ids)
 
-    def find_items(self, row):
+    def find_cells(self, row):
         rel_session_path = self.row_path(row)
         root_dir = row.dataset.root_dir
         session_path = root_dir / rel_session_path
         session_path.mkdir(exist_ok=True)
         for modality_dir in session_path.iterdir():
-            self.find_items_in_dir(modality_dir, row)
+            self.find_cells_from_dir(modality_dir, row)
         deriv_dir = root_dir / "derivatives"
         if deriv_dir.exists():
             for pipeline_dir in deriv_dir.iterdir():
-                self.find_items_in_dir(pipeline_dir / rel_session_path, row)
+                self.find_cells_from_dir(pipeline_dir / rel_session_path, row)
 
     def fileset_stem_path(self, fileset):
         row = fileset.row

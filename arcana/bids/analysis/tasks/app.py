@@ -325,7 +325,7 @@ def to_bids(
     for inpt in inputs:
         dataset.add_sink(inpt.name, inpt.datatype, path=inpt.path)
     row = dataset.row(row_frequency, id)
-    with dataset.store:
+    with dataset.store.connection:
         for inpt_name, inpt_value in input_values.items():
             if inpt_value is attrs.NOTHING:
                 logger.warning("No input provided for '%s' input", inpt_name)
@@ -373,7 +373,7 @@ def extract_bids(
             output.datatype,
             path=path,
         )
-    with dataset.store:
+    with dataset.store.connection:
         for output in outputs:
             item = row[output.name]
             item.get()  # download to host if required
