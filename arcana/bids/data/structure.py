@@ -131,6 +131,20 @@ class Bids(DirTree):
             fspath /= fname
         return fspath
 
+    def get_all_fileset_paths(self, fspath: Path):
+        fspaths = set(super().get_all_fileset_paths(fspath))
+        # Get inherited side-cars
+        for fspath in fspaths:
+            entities = self.get_file_entities(fspath)
+            parent = fspath.parent
+            for parent in parent:
+                for inherited in parent.iterdir():
+                    if inherited.is_file():
+                        inherited_entities = self.get_file_entities(inherited)
+                        if (inherited_entities & entities) == entities:
+                            fspaths.add(inherited)
+        return fspaths
+
     def get_fields_path(self, entry: DataEntry) -> Path:
         parts = entry.id.split("/")
         if parts[0] != "derivatives":
@@ -200,6 +214,11 @@ class Bids(DirTree):
         if dct is not None:
             with open(fileset.side_car, "w") as f:
                 json.dump(dct, f)
+
+        @classmethod
+        def get_file_entities(cls, fspath):
+            stem = fspath.name.split(".")[0]
+            return set(tuple(e.split("-")) for e in stem.split('_')[1:])
 
 
 def outputs_converter(outputs):
