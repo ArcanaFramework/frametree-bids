@@ -10,7 +10,7 @@ from dataclasses import dataclass
 import pytest
 import docker
 from arcana.core import __version__
-from fileformats.medimage import Nifti_Bids, Nifti_Gzip_Bids, Nifti_Gzip_Bids_Fslgrad
+from fileformats.medimage import NiftiX, NiftiGzX, NiftiGzXBvec
 from arcana.bids.data import BidsDataset
 from arcana.bids.analysis.tasks.app import bids_app, BidsInput, BidsOutput
 from fileformats.text import Plain as Text
@@ -46,7 +46,7 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
 
     dataset.save_metadata()
 
-    dataset.add_sink("t1w", datatype=Nifti_Bids, path="anat/T1w")
+    dataset.add_sink("t1w", datatype=NiftiX, path="anat/T1w")
 
     dummy_nifti = work_dir / "t1w.nii"
     # dummy_nifti_gz = dummy_nifti + '.gz'
@@ -87,13 +87,13 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
     assert bids_success_str in result
 
     reloaded = BidsDataset.load(path)
-    reloaded.add_sink("t1w", datatype=Nifti_Bids, path="anat/T1w")
+    reloaded.add_sink("t1w", datatype=NiftiX, path="anat/T1w")
 
     assert dataset == reloaded
 
 
 @dataclass
-class SourceNifti_BidsBlueprint:
+class SourceNiftiXBlueprint:
     """The blueprint for the source nifti files"""
 
     path: str  # BIDS path for Nift
@@ -104,7 +104,7 @@ class SourceNifti_BidsBlueprint:
 @dataclass
 class JsonEditBlueprint:
 
-    source_niftis: ty.Dict[str, SourceNifti_BidsBlueprint]
+    source_niftis: ty.Dict[str, SourceNiftiXBlueprint]
     path_re: str  # regular expression for the paths to edit
     jq_script: str  # jq script
 
@@ -114,7 +114,7 @@ JSON_EDIT_TESTS = {
         path_re="anat/T.*w",
         jq_script=".a.b += 4",
         source_niftis={
-            "t1w": SourceNifti_BidsBlueprint(
+            "t1w": SourceNiftiXBlueprint(
                 path="anat/T1w",
                 orig_side_car={"a": {"b": 1.0}},
                 edited_side_car={"a": {"b": 5.0}},
@@ -125,7 +125,7 @@ JSON_EDIT_TESTS = {
         path_re="anat/T.*w",
         jq_script=".a.b += 4 | .a.c[] *= 2",
         source_niftis={
-            "t1w": SourceNifti_BidsBlueprint(
+            "t1w": SourceNiftiXBlueprint(
                 path="anat/T1w",
                 orig_side_car={"a": {"b": 1.0, "c": [2, 4, 6]}},
                 edited_side_car={"a": {"b": 5.0, "c": [4, 8, 12]}},
@@ -136,22 +136,22 @@ JSON_EDIT_TESTS = {
         path_re="fmap/.*",
         jq_script='.IntendedFor = "{bold}"',
         source_niftis={
-            "bold": SourceNifti_BidsBlueprint(
+            "bold": SourceNiftiXBlueprint(
                 path="func/task-rest_bold",
                 orig_side_car={},
                 edited_side_car={"TaskName": "rest"},
             ),
-            "fmap_mag1": SourceNifti_BidsBlueprint(
+            "fmap_mag1": SourceNiftiXBlueprint(
                 path="fmap/magnitude1",
                 orig_side_car={},
                 edited_side_car={"IntendedFor": "func/sub-1_ses-1_task-rest_bold.nii"},
             ),
-            "fmap_mag2": SourceNifti_BidsBlueprint(
+            "fmap_mag2": SourceNiftiXBlueprint(
                 path="fmap/magnitude2",
                 orig_side_car={},
                 edited_side_car={"IntendedFor": "func/sub-1_ses-1_task-rest_bold.nii"},
             ),
-            "fmap_phasediff": SourceNifti_BidsBlueprint(
+            "fmap_phasediff": SourceNiftiXBlueprint(
                 path="fmap/phasediff",
                 orig_side_car={},
                 edited_side_car={"IntendedFor": "func/sub-1_ses-1_task-rest_bold.nii"},
@@ -194,7 +194,7 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
     dataset.save_metadata()
 
     for sf_name, sf_bp in bp.source_niftis.items():
-        dataset.add_sink(sf_name, datatype=Nifti_Bids, path=sf_bp.path)
+        dataset.add_sink(sf_name, datatype=NiftiX, path=sf_bp.path)
 
         nifti_fspath = work_dir / (sf_name + ".nii")
         # dummy_nifti_gz = dummy_nifti + '.gz'
@@ -235,9 +235,9 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
 
 
 BIDS_INPUTS = [
-    BidsInput(name="T1w", path="anat/T1w", datatype=Nifti_Gzip_Bids),
-    BidsInput(name="T2w", path="anat/T2w", datatype=Nifti_Gzip_Bids),
-    BidsInput(name="dwi", path="dwi/dwi", datatype=Nifti_Gzip_Bids_Fslgrad),
+    BidsInput(name="T1w", path="anat/T1w", datatype=NiftiGzX),
+    BidsInput(name="T2w", path="anat/T2w", datatype=NiftiGzX),
+    BidsInput(name="dwi", path="dwi/dwi", datatype=NiftiGzXBvec),
 ]
 BIDS_OUTPUTS = [
     BidsOutput(name="whole_dir", datatype=Directory),  # whole derivative directory
@@ -281,9 +281,9 @@ def test_run_bids_app_naked(
 ):
 
     kwargs = {}
-    # INPUTS = [Input('anat/T1w', Nifti_Gzip_Bids),
-    #           Input('anat/T2w', Nifti_Gzip_Bids),
-    #           Input('dwi/dwi', Nifti_Gzip_Bids_Fslgrad)]
+    # INPUTS = [Input('anat/T1w', NiftiGzX),
+    #           Input('anat/T2w', NiftiGzX),
+    #           Input('dwi/dwi', NiftiGzXBvec)]
     # OUTPUTS = [Output('', Directory),  # whole derivative directory
     #            Output('file1', Text),
     #            Output('file2', Text)]

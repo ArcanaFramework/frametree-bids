@@ -78,7 +78,7 @@ def bids_app(
         The inputs to be inserted into the BIDS dataset. Should be a list of tuples
         consisting of the the path the file/directory should be stored within a BIDS subject/session,
         e.g. anat/T1w, func/bold, and the DataFormat class it should be stored in, e.g.
-        arcana.bids.data.Nifti_Gzip_Bids.
+        arcana.bids.data.NiftiGzX.
     outputs : list[ty.Union[AppField, dict[str, str]]]
         The outputs to be extracted from the derivatives directory. Should be a list of tuples
         consisting of the the path the file/directory is saved by the app within a BIDS subject/session,
