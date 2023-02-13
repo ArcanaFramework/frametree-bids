@@ -116,7 +116,7 @@ class Bids(DirTree):
             elif len(parts) == 2 and not entry.datatype.is_dir:
                 raise ArcanaUsageError(
                     "Single-level derivative paths must be of type directory "
-                    f"({entry.id}: {entry.datatype.mime_like})"
+                    f"({entry.path}: {entry.datatype.mime_like})"
                 )
             # append the first to parts of the path before the row ID (e.g. sub-01/ses-02)
             fspath = fspath.joinpath(*parts[:2])
@@ -146,7 +146,7 @@ class Bids(DirTree):
         return fspaths
 
     def get_fields_path(self, entry: DataEntry) -> Path:
-        parts = entry.id.split("/")
+        parts = entry.path.split("/")
         if parts[0] != "derivatives":
             assert False, "Non-derivative fields should be taken from participants.tsv"
         return (
@@ -158,7 +158,7 @@ class Bids(DirTree):
     def get_field(self, entry: DataEntry) -> Field:
         row = entry.row
         dataset = row.dataset
-        if entry.id in dataset.participant_attrs:
+        if entry.path in dataset.participant_attrs:
             val = entry.datatype(dataset.participants[row.ids["subject"]])
         else:
             val = super().get_field(entry)
