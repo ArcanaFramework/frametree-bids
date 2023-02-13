@@ -1,7 +1,9 @@
 import os
 import logging
+from warnings import warn
 import pytest
 import tempfile
+import requests.exceptions
 from pathlib import Path
 from tempfile import mkdtemp
 from click.testing import CliRunner
@@ -93,8 +95,8 @@ def mock_bids_app_script():
     ]:
         subdir, suffix = inpt_path.split("/")
         file_tests += f"""
-        if [ ! -f "$BIDS_DATASET/sub-${{SUBJ_ID}}/{subdir}/sub-${{SUBJ_ID}}_{suffix}.{datatype.ext}" ]; then
-            echo "Did not find {suffix} file at $BIDS_DATASET/sub-${{SUBJ_ID}}/{subdir}/sub-${{SUBJ_ID}}_{suffix}.{datatype.ext}"
+        if [ ! -f "$BIDS_DATASET/sub-${{SUBJ_ID}}/{subdir}/sub-${{SUBJ_ID}}_{suffix}{datatype.ext}" ]; then
+            echo "Did not find {suffix} file at $BIDS_DATASET/sub-${{SUBJ_ID}}/{subdir}/sub-${{SUBJ_ID}}_{suffix}{datatype.ext}"
             exit 1;
         fi
         """
@@ -130,7 +132,10 @@ def bids_success_str():
 @pytest.fixture(scope="session")
 def bids_validator_docker():
     dc = docker.from_env()
-    dc.images.pull(BIDS_VALIDATOR_DOCKER)
+    try:
+        dc.images.pull(BIDS_VALIDATOR_DOCKER)
+    except requests.exceptions.HTTPError:
+        warn("No internet connection, so couldn't download latest BIDS validator")
     return BIDS_VALIDATOR_DOCKER
 
 

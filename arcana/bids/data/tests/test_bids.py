@@ -3,6 +3,8 @@ import stat
 import typing as ty
 import json
 from pathlib import Path
+from warnings import warn
+import requests.exceptions
 import nibabel as nb
 import numpy.random
 import shutil
@@ -71,12 +73,14 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
         json.dump({"test": "json-file"}, f)
 
     for row in dataset.rows(frequency="session"):
-        item = row["t1w"]
-        item.put(dummy_nifti, dummy_json)
+        row["t1w"] = (dummy_nifti, dummy_json)
 
     # Full dataset validation using dockerized validator
     dc = docker.from_env()
-    dc.images.pull(bids_validator_docker)
+    try:
+        dc.images.pull(bids_validator_docker)
+    except requests.exceptions.HTTPError:
+        warn("No internet connection, so couldn't download latest BIDS validator")
     result = dc.containers.run(
         bids_validator_docker,
         "/data",
@@ -219,10 +223,7 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
             json.dump(sf_bp.orig_side_car, f)
 
         # Get single item in dataset
-        item = dataset[sf_name][("ses-1", "sub-1")]
-
-        # Put file paths in item
-        item.put(nifti_fspath, json_fspath)
+        dataset[sf_name][("ses-1", "sub-1")] = (nifti_fspath, json_fspath)
 
     # Check edited JSON matches reference
     for sf_name, sf_bp in bp.source_niftis.items():
@@ -314,7 +315,7 @@ def test_run_bids_app_naked(
     for inpt in BIDS_INPUTS:
         kwargs[inpt.name] = nifti_sample_dir.joinpath(
             *inpt.path.split("/")
-        ).with_suffix("." + inpt.datatype.ext)
+        ).with_suffix(inpt.datatype.ext)
 
     bids_dir = work_dir / "bids"
 

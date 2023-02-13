@@ -330,8 +330,7 @@ def to_bids(
             if inpt_value is attrs.NOTHING:
                 logger.warning("No input provided for '%s' input", inpt_name)
                 continue
-            row_item = row[inpt_name]
-            row_item.put(inpt_value)  # Store value/path in store
+            row[inpt_name] = inpt_value
     return (dataset, True)
 
 
@@ -375,9 +374,7 @@ def extract_bids(
         )
     with dataset.store.connection:
         for output in outputs:
-            item = row[output.name]
-            item.get()  # download to host if required
-            output_paths.append(item.value)
+            output_paths.append(row[output.name])
     return tuple(output_paths) if len(outputs) > 1 else output_paths[0]
 
 

@@ -86,7 +86,7 @@ class Bids(DirTree):
                 explicit_ids = {}
             if tree.dataset.is_multi_session():
                 for sess_id in (tree.dataset.root_dir / subject_id).iterdir():
-                    tree.add_leaf([subject_id, sess_id], explicit_ids=explicit_ids)
+                    tree.add_leaf([subject_id, sess_id.name], explicit_ids=explicit_ids)
             else:
                 tree.add_leaf([subject_id], explicit_ids=explicit_ids)
 
@@ -105,7 +105,7 @@ class Bids(DirTree):
     def get_fileset_path(self, entry: DataEntry) -> Path:
         row = entry.row
         fspath = self.root_dir(row)
-        parts = entry.id.split("/")
+        parts = entry.path.split("/")
         if parts[-1] == "":
             parts = parts[:-1]
         if parts[0] == "derivatives":
@@ -204,7 +204,7 @@ class Bids(DirTree):
             rel_path = self.fileset_stem_path(item).relative_to(
                 fileset.row.dataset.root_dir / self.row_path(fileset.row)
             )
-            col_paths[col_name] = str(rel_path) + "." + fileset.ext
+            col_paths[col_name] = str(rel_path) + fileset.ext
 
         for jedit in self.json_edits:
             jq_expr = jedit.jq_expr.format(**col_paths)  # subst col file paths
@@ -215,10 +215,10 @@ class Bids(DirTree):
             with open(fileset.side_car, "w") as f:
                 json.dump(dct, f)
 
-        @classmethod
-        def get_file_entities(cls, fspath):
-            stem = fspath.name.split(".")[0]
-            return set(tuple(e.split("-")) for e in stem.split('_')[1:])
+    @classmethod
+    def get_file_entities(cls, fspath):
+        stem = fspath.name.split(".")[0]
+        return set(tuple(e.split("-")) for e in stem.split('_')[1:])
 
 
 def outputs_converter(outputs):

@@ -178,20 +178,21 @@ class BidsDataset(Dataset):
             **kwargs,
         )
         # Create rows
-        for subject_id in subject_ids:
-            if not subject_id.startswith("sub-"):
-                subject_id = f"sub-{subject_id}"
-            dataset.participants[subject_id] = {}
-            if session_ids:
-                for session_id in session_ids:
-                    if not session_id.startswith("sub-"):
-                        session_id = f"ses-{session_id}"
-                    row = dataset.add_leaf([subject_id, session_id])
-                    Bids.absolute_row_path(row).mkdir(parents=True)
-            else:
-                row = dataset.add_leaf([subject_id])
-                Bids.absolute_row_path(row).mkdir(parents=True, exist_ok=True)
-        dataset.save_metadata()
+        with dataset.cache:
+            for subject_id in subject_ids:
+                if not subject_id.startswith("sub-"):
+                    subject_id = f"sub-{subject_id}"
+                dataset.participants[subject_id] = {}
+                if session_ids:
+                    for session_id in session_ids:
+                        if not session_id.startswith("sub-"):
+                            session_id = f"ses-{session_id}"
+                        row = dataset.cache.add_leaf([subject_id, session_id])
+                        Bids.absolute_row_path(row).mkdir(parents=True)
+                else:
+                    row = dataset.cache.add_leaf([subject_id])
+                    Bids.absolute_row_path(row).mkdir(parents=True, exist_ok=True)
+            dataset.save_metadata()
         return dataset
 
     def is_multi_session(self):
