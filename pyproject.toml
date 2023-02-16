@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "arcana-bids"
 description = "An Arcana extension for interacting with Brain Imaging Structure (BIDS) datasets and associated \"Apps\""
 readme = "README.rst"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 dependencies = [
     "arcana",
     "fileformats[extended] >= 0.3.3",
@@ -24,7 +24,6 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
