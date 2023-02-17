@@ -13,8 +13,8 @@ import pytest
 import docker
 from arcana.core import __version__
 from fileformats.medimage import NiftiX, NiftiGzX, NiftiGzXBvec
-from arcana.bids.data import BidsDataset
-from arcana.bids.analysis.tasks.app import bids_app, BidsInput, BidsOutput
+from arcana.bids.data import Bids
+from arcana.bids.tasks import bids_app, BidsInput, BidsOutput
 from fileformats.text import Plain as Text
 from fileformats.generic import Directory
 
@@ -30,13 +30,15 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
     name = "bids-dataset"
 
     shutil.rmtree(path, ignore_errors=True)
-    dataset = BidsDataset.create(
-        path,
-        name,
+    dataset = Bids().create_dataset(
+        id=path,
+        name=name,
         subject_ids=[str(i) for i in range(1, 4)],
-        session_ids=[str(i) for i in range(1, 3)],
-        readme=MOCK_README,
-        authors=MOCK_AUTHORS,
+        timepoint_ids=[str(i) for i in range(1, 3)],
+        metadata={
+            "readme": MOCK_README,
+            "authors": MOCK_AUTHORS
+        },
     )
 
     dataset.add_generator_metadata(
@@ -90,7 +92,7 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
     ).decode("utf-8")
     assert bids_success_str in result
 
-    reloaded = BidsDataset.load(path)
+    reloaded = Bids().load_dataset(id=path)
     reloaded.add_sink("t1w", datatype=NiftiX, path="anat/T1w")
 
     assert dataset == reloaded
@@ -178,11 +180,11 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
     name = "bids-dataset"
 
     shutil.rmtree(path, ignore_errors=True)
-    dataset = BidsDataset.create(
-        path,
-        name,
+    dataset = Bids().create_dataset(
+        id=path,
+        name=name,
         subject_ids=["1"],
-        session_ids=["1"],
+        timepoint_ids=["1"],
         readme=MOCK_README,
         authors=MOCK_AUTHORS,
         json_edits=[(bp.path_re, bp.jq_script)],

@@ -20,14 +20,14 @@ from pydra.engine.specs import (
 from arcana.core.data.set import Dataset
 from fileformats.core import FileSet
 from arcana.core.data.space import Clinical
-from arcana.bids.data.structure import JsonEdit
-from arcana.bids.data.dataset import BidsDataset
+from arcana.bids.data import JsonEdit
 from arcana.core.exceptions import ArcanaUsageError
 from arcana.core.utils.serialize import (
     ClassResolver,
     ObjectListConverter,
 )
 from arcana.core.utils.misc import func_task
+from .data import Bids
 
 logger = logging.getLogger("arcana")
 
@@ -136,8 +136,8 @@ def bids_app(
     if dataset is None:
         dataset = Path(tempfile.mkdtemp()) / "arcana_bids_dataset"
     if not isinstance(dataset, Dataset):
-        dataset = BidsDataset.create(
-            path=dataset, name=name + "_dataset", subject_ids=[DEFAULT_BIDS_ID]
+        dataset = Bids().create_dataset(
+            id=dataset, name=name + "_dataset", subject_ids=[DEFAULT_BIDS_ID]
         )
 
     # Convert from JSON format inputs/outputs to tuples with resolved data formats
@@ -172,7 +172,7 @@ def bids_app(
                 + [(i, ty.Union[str, Path]) for i in input_names]
             ),
             out_fields=[
-                ("dataset", BidsDataset),
+                ("dataset", Dataset),
                 ("completed", bool),
             ],
             name="to_bids",
