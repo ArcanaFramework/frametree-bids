@@ -180,14 +180,18 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
     name = "bids-dataset"
 
     shutil.rmtree(path, ignore_errors=True)
-    dataset = Bids().create_dataset(
+    dataset = Bids(
+        json_edits=[(bp.path_re, bp.jq_script)],
+    ).create_dataset(
         id=path,
         name=name,
         subject_ids=["1"],
         timepoint_ids=["1"],
-        readme=MOCK_README,
-        authors=MOCK_AUTHORS,
-        json_edits=[(bp.path_re, bp.jq_script)],
+        metadata={
+            "readme": MOCK_README,
+            "authors": MOCK_AUTHORS,
+        },
+        
     )
 
     dataset.add_generator_metadata(
