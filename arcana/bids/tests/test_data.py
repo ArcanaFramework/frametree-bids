@@ -30,11 +30,13 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
     name = "bids-dataset"
 
     shutil.rmtree(path, ignore_errors=True)
-    dataset = Bids().create_dataset(
+    dataset = Bids().create_empty_dataset(
         id=path,
         name=name,
-        subject_ids=[str(i) for i in range(1, 4)],
-        timepoint_ids=[str(i) for i in range(1, 3)],
+        row_ids={
+            "subject": [str(i) for i in range(1, 4)],
+            "timepoint": [str(i) for i in range(1, 3)],
+        },
         metadata={
             "readme": MOCK_README,
             "authors": MOCK_AUTHORS
@@ -182,7 +184,7 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
     shutil.rmtree(path, ignore_errors=True)
     dataset = Bids(
         json_edits=[(bp.path_re, bp.jq_script)],
-    ).create_dataset(
+    ).create_empty_dataset(
         id=path,
         name=name,
         subject_ids=["1"],

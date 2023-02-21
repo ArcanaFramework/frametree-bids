@@ -4,13 +4,14 @@ import re
 import logging
 import itertools
 from operator import itemgetter
+from collections import defaultdict
 import attrs
 import jq
 from pathlib import Path
-from arcana.file_system import DirTree
+from arcana.core.data.store import LocalStore
 from fileformats.core import FileSet, Field
 from fileformats.medimage.nifti import WithBids
-from arcana.core.exceptions import ArcanaUsageError, ArcanaEmptyDatasetError
+from arcana.core.exceptions import ArcanaUsageError
 from arcana.core.data.tree import DataTree
 from arcana.core.data.set import Dataset, DatasetMetadata
 from arcana.core.data.space import Clinical
@@ -47,18 +48,8 @@ class JsonEdit:
         return parsed
 
 
-@attrs.define(kw_only=True)
-class BidsMetadata(DatasetMetadata):
-
-    participants: ty.Dict[str, ty.Dict[str, str]] = attrs.field(
-        factory=dict, repr=False
-    )
-    bids_version: str = attrs.field(default="1.0.1", repr=False)
-    bids_type: str = attrs.field(default="derivative", repr=False)
-
-
 @attrs.define
-class Bids(DirTree):
+class Bids(LocalStore):
     """Repository for working with data stored on the file-system in BIDS format
 
     Parameters
@@ -80,11 +71,14 @@ class Bids(DirTree):
     FIELDS_FNAME = "__fields__"
     FILES_PROV_FNAME = "__fields_provenance__"
 
+    VERSION_KEY = "BidsVersion"
+    VERSION = "1.0.1"
+
     #################################
     # Abstract-method implementations
     #################################
 
-    def populate_tree(self, tree: DataTree):
+    def scan_tree(self, tree: DataTree):
         """
         Find all rows within the dataset stored in the store and
         construct the data tree within the dataset
@@ -106,7 +100,7 @@ class Bids(DirTree):
             else:
                 tree.add_leaf([subject_id], explicit_ids=explicit_ids)
 
-    def populate_row(self, row: DataRow):
+    def scan_row(self, row: DataRow):
         rel_session_path = self.row_path(row)
         root_dir = row.dataset.root_dir
         session_path = root_dir / rel_session_path
@@ -226,106 +220,111 @@ class Bids(DirTree):
         self.update_json(fspath, key, provenance)
 
     # Override method in base to use sub-classed metadata
-    def define_dataset(self, *args, metadata=None, **kwargs):
-        return super().define_dataset(*args, metadata=self._convert_metadata(metadata), **kwargs)
+    # def define_dataset(self, *args, metadata=None, **kwargs):
+    #     return super().define_dataset(*args, metadata=self._convert_metadata(metadata), **kwargs)
 
-    def _convert_metadata(self, metadata):
-        if metadata is None:
-            metadata = {}
-        elif isinstance(metadata, DatasetMetadata):
-            metadata = attrs.asdict(metadata)
-        metadata = BidsMetadata(**metadata)
-        return metadata
+    # def _convert_metadata(self, metadata):
+    #     if metadata is None:
+    #         metadata = {}
+    #     elif isinstance(metadata, DatasetMetadata):
+    #         metadata = attrs.asdict(metadata)
+    #     metadata = BidsMetadata(**metadata)
+    #     return metadata
 
     ###############
     # Other methods
     ###############
 
-    def create_dataset(
+    def create_empty_dataset(
         self,
         id: str,
-        subject_ids: list[str],
-        timepoint_ids: list[str] = None,
+        row_ids: list[list[str]],
+        space: type = Clinical,
         name: str = None,
+        metadata: dict[str, ty.Any] = None,
         **kwargs,
     ):
-        if timepoint_ids is not None:
-            hierarchy = ["subject", "timepoint"]
-        else:
-            hierarchy = ["session"]
-        # if readme is None:
-        #     readme = "Mock readme\n" * 20
-        # if authors is None:
-        #     authors = ["Mock A. Author", "Mock B. Author"]
         root_dir = Path(id)
         root_dir.mkdir(parents=True)
-        participants = {}
+        if metadata is None:
+            metadata = {}
+        if "participants" not in metadata:
+            metadata["participants"] = defaultdict(dict)
         # Create rows
-        if timepoint_ids:
-            session_iter = itertools.product(subject_ids, timepoint_ids)
-        else:
-            session_iter = zip(subject_ids, itertools.repeat(None))
-        for subject_id, timepoint_id in session_iter:
+        for ids_tuple in itertools.product(*row_ids.values()):
+            ids = dict(zip(row_ids, ids_tuple))
+            subject_id = ids["subject"]
+            timepoint_id = ids.get("timepoint")
+            group_id = ids.get("group")
+            if "timepoint" in row_ids:
+                subject_id, timepoint_id = ids_tuple
+                if timepoint_id.startswith("ses-"):
+                    timepoint_id = f"ses-{timepoint_id}"
+            else:
+                subject_id = ids_tuple[0]
+                timepoint_id = None
             if not subject_id.startswith("sub-"):
                 subject_id = f"sub-{subject_id}"
-            participants[subject_id] = {}
-            if timepoint_id and not timepoint_id.startswith("ses-"):
-                timepoint_id = f"ses-{timepoint_id}"
+            metadata["participants"]["participant_id"] = subject_id
+            if group_id is not None:
+                metadata["participants"][subject_id]["group"] = group_id
             sess_dir_fspath = root_dir / self._entry2fs_path(
                 entry_path=None, subject_id=subject_id, timepoint_id=timepoint_id
             )
             sess_dir_fspath.mkdir(parents=True)
         dataset = self.define_dataset(
             id=id,
-            space=Clinical,
-            hierarchy=hierarchy,
+            space=space,
+            hierarchy=list(row_ids),
             name=name,
+            metadata=metadata,
             **kwargs,
         )
         dataset.save()
         return dataset
 
-    def save_dataset(self, dataset: Dataset, name: str = None, overwrite: bool = False):
+    def save_dataset(
+        self, dataset: Dataset, name: str = None, overwrite_metadata: bool = False
+    ):
 
+        super().save_dataset(dataset, name=name)
         root_dir = Path(dataset.id)
-
         participants_fspath = root_dir / "participants.tsv"
-        if participants_fspath.exists() and not overwrite:
+        if participants_fspath.exists() and not overwrite_metadata:
             logger.warning(
                 "Not attempting to overwrite existing BIDS dataset description at "
                 f"'{str(participants_fspath)}"
             )
         else:
-            if not dataset.metadata.participants:
-                raise ArcanaUsageError(
-                    "A BIDS dataset needs at least one participant before the metadata "
-                    "can be saved"
-                )
-
             with open(participants_fspath, "w") as f:
-                col_names = list(next(iter(self.participants.values())).keys())
-                f.write("\t".join(["participant_id"] + col_names) + "\n")
-                for pcpt_id, pcpt_attrs in self.participants.items():
-                    f.write(
-                        "\t".join([pcpt_id] + [pcpt_attrs[c] for c in col_names]) + "\n"
-                    )
+                col_names = ["participant_id"] + dataset.metadata.row_keys
+                if len(dataset.row_ids(Clinical.group)) > 1:
+                    col_names.append("group")
+                f.write("\t".join(col_names) + "\n")
+                for subject_row in dataset.rows(frequency=Clinical.subject):
+                    rw = [subject_row.id] + [
+                        subject_row.metadata[k] for k in dataset.metadata.row_keys
+                    ]
+                    if "group" in col_names:
+                        rw.append(subject_row.ids[Clinical.group])
+                    f.write("\t".join(rw) + "\n")
 
         dataset_description_fspath = root_dir / "dataset_description.json"
-        if dataset_description_fspath.exists() and not overwrite:
+        if dataset_description_fspath.exists() and not overwrite_metadata:
             logger.warning(
                 "Not attempting to overwrite existing BIDS dataset description at "
                 f"'{str(dataset_description_fspath)}"
             )
         else:
-            metadata_dict = attrs.asdict(dataset.metadata, recurse=True)
-            dataset_description = {k: metadata_dict[a] for a, k in METADATA_MAPPING}
-
+            dataset_description = map_to_bids_names(
+                attrs.asdict(dataset.metadata, recurse=True)
+            )
             with open(dataset_description_fspath, "w") as f:
                 json.dump(dataset_description, f, indent="    ")
 
         if dataset.metadata.readme is not None:
             readme_path = root_dir / "README"
-            if readme_path.exists() and not overwrite:
+            if readme_path.exists() and not overwrite_metadata:
                 logger.warning(
                     "Not attempting to overwrite existing BIDS dataset description at "
                     f"'{str(dataset_description_fspath)}"
@@ -333,14 +332,11 @@ class Bids(DirTree):
             else:
                 with open(readme_path, "w") as f:
                     f.write(self.readme)
-        super().save_dataset(dataset, name=name)
 
-    def load_dataset(self, id, name=None):
-        from arcana.core.data.set import (
-            Dataset,
-        )  # avoid circular imports it is imported here rather than at the top of the file
-
-        
+    # def load_dataset(self, id, name=None):
+    #     from arcana.core.data.set import (
+    #         Dataset,
+    #     )  # avoid circular imports it is imported here rather than at the top of the file
 
     ################
     # Helper methods
@@ -504,6 +500,47 @@ METADATA_MAPPING = (
     ("ethics_approvals", "EthicsApprovals"),
     ("references", "ReferencesAndLinks"),
     ("doi", "DatasetDOI"),
-    ("generated_by", "GeneratedBy"),
-    ("sources", "SourceDatasets"),
+    (
+        "generated_by",
+        "GeneratedBy",
+        (
+            ("name", "Name"),
+            ("description", "Description"),
+            ("code_url", "CodeURL"),
+            (
+                "container",
+                "Container",
+                (
+                    ("type", "Type"),
+                    ("tag", "Tag"),
+                    ("uri", "URI"),
+                ),
+            ),
+        ),
+    ),
+    (
+        "sources",
+        "SourceDatasets",
+        (
+            ("url", "URL"),
+            ("doi", "DOI"),
+            ("version", "Version"),
+        ),
+    ),
 )
+
+
+def map_to_bids_names(dct, mappings=METADATA_MAPPING):
+    return {
+        m[1]: dct[m[0]] if len(m) == 2 else map_to_bids_names(dict[m[0]], mappings=m[2])
+        for m in mappings
+        if dct[m[0]] is not None
+    }
+
+
+def map_from_bids_names(dct, mappings=METADATA_MAPPING):
+    return {
+        m[0]: dct[m[1]] if len(m) == 2 else map_to_bids_names(dict[m[1]], mappings=m[2])
+        for m in mappings
+        if dct[m[1]] is not None
+    }

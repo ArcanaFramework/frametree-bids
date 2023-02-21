@@ -52,7 +52,7 @@ def test_bids_app_entrypoint(
 
     blueprint = dataset.__annotations__["blueprint"]
 
-    dataset_locator = f"file//{dataset_path}"
+    dataset_locator = f"{dataset_path}"
     # Start generating the arguments for the CLI
     # Add source to loaded dataset
     args = [
