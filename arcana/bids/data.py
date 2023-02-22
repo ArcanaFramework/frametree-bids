@@ -1,10 +1,10 @@
+import os.path
 import typing as ty
 import json
 import re
 import logging
 import itertools
 from operator import itemgetter
-from collections import defaultdict
 import attrs
 import jq
 from pathlib import Path
@@ -13,7 +13,7 @@ from fileformats.core import FileSet, Field
 from fileformats.medimage.nifti import WithBids
 from arcana.core.exceptions import ArcanaUsageError
 from arcana.core.data.tree import DataTree
-from arcana.core.data.set import Dataset, DatasetMetadata
+from arcana.core.data.set import Dataset
 from arcana.core.data.space import Clinical
 from arcana.core.data.entry import DataEntry
 from arcana.core.data.row import DataRow
@@ -67,12 +67,11 @@ class Bids(LocalStore):
 
     name: str = "bids"
 
+    BIDS_VERSION = "1.0.1"
+
     PROV_SUFFIX = ".provenance"
     FIELDS_FNAME = "__fields__"
     FILES_PROV_FNAME = "__fields_provenance__"
-
-    VERSION_KEY = "BidsVersion"
-    VERSION = "1.0.1"
 
     #################################
     # Abstract-method implementations
@@ -88,27 +87,42 @@ class Bids(LocalStore):
         dataset : Dataset
             The dataset to construct the tree dimensions for
         """
+        root_dir = Path(tree.dataset.id)
+        participants_fspath = root_dir / "participants.tsv"
+        participants = {}
+        with open(participants_fspath) as f:
+            lines = f.read().splitlines()
+        if lines:
+            participant_keys = lines[0].split("\t")
+            for line in lines[1:]:
+                dct = dict(zip(participant_keys, line.split("\t")))
+                participants[dct.pop("participant_id")[len("sub-"):]] = dct
 
-        for subject_id, participant in tree.dataset.participants.items():
+        for subject_dir in root_dir.iterdir():
+            if not subject_dir.name.startswith("sub-"):
+                continue
+            subject_id = subject_dir.name[len("sub-") :]
             try:
-                explicit_ids = {"group": participant["group"]}
+                additional_ids = {"group": participants[subject_id]["group"]}
             except KeyError:
-                explicit_ids = {}
-            if tree.dataset.is_multi_session():
-                for sess_id in (tree.dataset.root_dir / subject_id).iterdir():
-                    tree.add_leaf([subject_id, sess_id.name], explicit_ids=explicit_ids)
+                additional_ids = {}
+            if any(d.name.startswith("ses-") for d in subject_dir.iterdir()):
+                for sess_dir in subject_dir.iterdir():
+                    sess_id = sess_dir.name[len("ses-") :]
+                    tree.add_leaf([subject_id, sess_id], additional_ids=additional_ids)
             else:
-                tree.add_leaf([subject_id], explicit_ids=explicit_ids)
+                tree.add_leaf([subject_id], additional_ids=additional_ids)
 
     def scan_row(self, row: DataRow):
-        rel_session_path = self.row_path(row)
+
         root_dir = row.dataset.root_dir
-        session_path = root_dir / rel_session_path
+        relpath = self._rel_row_path(row)
+        session_path = root_dir / relpath
         session_path.mkdir(exist_ok=True)
         for modality_dir in session_path.iterdir():
             for entry_fspath in modality_dir.iterdir():
                 path = f"{modality_dir.name}/{self._fs2entry_path(entry_fspath)}"
-                suffix = "".join(path.suffixes)
+                suffix = "".join(entry_fspath.suffixes)
                 path = path[: -len(suffix)] + "/" + suffix.lstrip(".")
                 row.add_entry(
                     path=path,
@@ -118,40 +132,54 @@ class Bids(LocalStore):
         deriv_dir = root_dir / "derivatives"
         if deriv_dir.exists():
             for pipeline_dir in deriv_dir.iterdir():
-                for entry_fspath in (pipeline_dir / rel_session_path).iterdir():
-                    if not (
-                        entry_fspath.name.startswith(".")
-                        or entry_fspath.name
-                        not in (self.FIELDS_FNAME, self.FIELDS_PROV_FNAME)
-                        or entry_fspath.name.endswith(self.PROV_SUFFIX)
-                    ):
-                        path = (
-                            f"derivatives/{pipeline_dir.name}/"
-                            + self._fs2entry_path(entry_fspath.name)
-                        )
-                        suffix = "".join(path.suffixes)
-                        path = path[: -len(suffix)] + "/" + suffix.lstrip(".")
-                        row.add_entry(
-                            path=path,
-                            datatype=FileSet,
-                            uri=str(entry_fspath.relative_to(root_dir)),
-                        )
+                pipeline_row_dir = (pipeline_dir / relpath)
+                if pipeline_row_dir.exists():
+                    for entry_fspath in (pipeline_dir / relpath).iterdir():
+                        if not (
+                            entry_fspath.name.startswith(".")
+                            or entry_fspath.name
+                            not in (self.FIELDS_FNAME, self.FIELDS_PROV_FNAME)
+                            or entry_fspath.name.endswith(self.PROV_SUFFIX)
+                        ):
+                            path = (
+                                f"derivatives/{pipeline_dir.name}/"
+                                + self._fs2entry_path(entry_fspath.name)
+                            )
+                            suffix = "".join(path.suffixes)
+                            path = path[: -len(suffix)] + "/" + suffix.lstrip(".")
+                            row.add_entry(
+                                path=path,
+                                datatype=FileSet,
+                                uri="@" + str(entry_fspath.relative_to(root_dir)),
+                            )
 
     def fileset_uri(self, path: str, datatype: type, row: DataRow) -> str:
-        return "derivatives/" + self._entry2fs_path(
-            path,
-            subject_id=row.ids[Clinical.subject],
-            timepoint_id=(
-                row.ids[Clinical.timepoint]
-                if Clinical.timepoint in row.dataset.hierarchy
-                else None
-            ),
-            ext=datatype.ext,
+        if path.startswith("@"):  # derivative
+            base_uri = "derivatives/"
+            path = path[1:]
+        else:
+            base_uri = ""
+        return base_uri + str(
+            self._entry2fs_path(
+                path,
+                subject_id=row.ids[Clinical.subject],
+                timepoint_id=(
+                    row.ids[Clinical.timepoint]
+                    if Clinical.timepoint in row.dataset.hierarchy
+                    else None
+                ),
+                ext=datatype.ext,
+            )
         )
 
     def field_uri(self, path: str, datatype: type, row: DataRow) -> str:
+        if path.startswith("@"):  # derivative
+            base_uri = "derivatives/"
+            path = path[1:]
+        else:
+            base_uri = ""
         try:
-            pipeline_name, field_name = path.split("/")
+            namespace, field_name = path.split("/")
         except ValueError:
             raise ArcanaUsageError(
                 f"Field path '{path}', should contain two sections delimted by '/', "
@@ -159,9 +187,9 @@ class Bids(LocalStore):
                 "and the second the field name"
             )
         return (
-            "derivatives/"
+            base_uri
             + self._entry2fs_path(
-                f"{pipeline_name}/{self.FIELDS_FNAME}",
+                f"{namespace}/{self.FIELDS_FNAME}",
                 subject_id=row.ids[Clinical.subject],
                 timepoint_id=(
                     row.ids[Clinical.timepoint]
@@ -169,7 +197,7 @@ class Bids(LocalStore):
                     else None
                 ),
             )
-        ) + f"@{field_name}"
+        ) + f"::{field_name}"
 
     def get_fileset(self, entry: DataEntry, datatype: type) -> FileSet:
         return datatype(self._fileset_fspath(entry))
@@ -181,12 +209,12 @@ class Bids(LocalStore):
         fspath = self._fileset_fspath(entry)
         # Create target directory if it doesn't exist already
         copied_fileset = fileset.copy_to(
-            dest_dir=fspath.parent, stem=fspath.name, make_dirs=True
+            dest_dir=fspath.parent, stem=fspath.name[:-len(fileset.ext)], make_dirs=True
         )
-        if isinstance(fileset, WithBids):
+        if isinstance(copied_fileset, WithBids):
             # Ensure TaskName field is present in the JSON side-car if task
             # is in the filename
-            self._edit_nifti_x(fileset)
+            self._edit_nifti_x(copied_fileset, entry)
         return copied_fileset
 
     def get_field(self, entry: DataEntry, datatype: type) -> Field:
@@ -238,46 +266,48 @@ class Bids(LocalStore):
     def create_empty_dataset(
         self,
         id: str,
-        row_ids: list[list[str]],
+        row_ids: dict[str, list[str]],
         space: type = Clinical,
         name: str = None,
-        metadata: dict[str, ty.Any] = None,
         **kwargs,
     ):
         root_dir = Path(id)
         root_dir.mkdir(parents=True)
-        if metadata is None:
-            metadata = {}
-        if "participants" not in metadata:
-            metadata["participants"] = defaultdict(dict)
-        # Create rows
+        group_ids = {}
+        # Create sub-directories corresponding to rows of the dataset
         for ids_tuple in itertools.product(*row_ids.values()):
             ids = dict(zip(row_ids, ids_tuple))
             subject_id = ids["subject"]
             timepoint_id = ids.get("timepoint")
             group_id = ids.get("group")
-            if "timepoint" in row_ids:
-                subject_id, timepoint_id = ids_tuple
-                if timepoint_id.startswith("ses-"):
-                    timepoint_id = f"ses-{timepoint_id}"
-            else:
-                subject_id = ids_tuple[0]
-                timepoint_id = None
-            if not subject_id.startswith("sub-"):
-                subject_id = f"sub-{subject_id}"
-            metadata["participants"]["participant_id"] = subject_id
             if group_id is not None:
-                metadata["participants"][subject_id]["group"] = group_id
+                subject_id = group_id + str(subject_id)
+                group_ids[subject_id] = group_id
             sess_dir_fspath = root_dir / self._entry2fs_path(
                 entry_path=None, subject_id=subject_id, timepoint_id=timepoint_id
             )
             sess_dir_fspath.mkdir(parents=True)
+        # Save group IDs in participants TSV
+        if group_ids:
+            with open(root_dir / "participants.tsv", "w") as f:
+                f.write("participant_id\tgroup\n")
+                for subject_id, group_id in group_ids.items():
+                    f.write(f"sub-{subject_id}\t{group_id}\n")
+            participants_desc = {
+                "group": {
+                    "Description": "the group the participant belonged to",
+                    "Levels": {g: f"{g} group" for g in row_ids["group"]}
+                }
+            }
+            with open(root_dir / "participants.json", "w") as f:
+                json.dump(participants_desc, f)
         dataset = self.define_dataset(
             id=id,
             space=space,
-            hierarchy=list(row_ids),
+            hierarchy=(
+                ["subject", "timepoint"] if "timepoint" in row_ids else ["subject"]
+            ),
             name=name,
-            metadata=metadata,
             **kwargs,
         )
         dataset.save()
@@ -319,6 +349,7 @@ class Bids(LocalStore):
             dataset_description = map_to_bids_names(
                 attrs.asdict(dataset.metadata, recurse=True)
             )
+            dataset_description["BIDSVersion"] = self.BIDS_VERSION
             with open(dataset_description_fspath, "w") as f:
                 json.dump(dataset_description, f, indent="    ")
 
@@ -331,7 +362,7 @@ class Bids(LocalStore):
                 )
             else:
                 with open(readme_path, "w") as f:
-                    f.write(self.readme)
+                    f.write(dataset.metadata.readme)
 
     # def load_dataset(self, id, name=None):
     #     from arcana.core.data.set import (
@@ -346,7 +377,7 @@ class Bids(LocalStore):
         return Path(entry.row.dataset.id) / entry.uri
 
     def _fields_fspath_and_key(self, entry):
-        relpath, key = entry.uri.split("@")
+        relpath, key = entry.uri.split("::")
         fspath = Path(entry.row.dataset.id) / relpath
         return fspath, key
 
@@ -357,7 +388,7 @@ class Bids(LocalStore):
         fields_fspath, key = self._fields_fspath_and_key(entry)
         return fields_fspath.parent / self.FIELDS_PROV_FNAME, key
 
-    def _edit_nifti_x(self, fileset: WithBids):
+    def _edit_nifti_x(self, nifti_x: WithBids, entry: DataEntry):
         """Edit JSON files as they are written to manually modify the JSON
         generated by the dcm2niix where required
 
@@ -366,39 +397,29 @@ class Bids(LocalStore):
         fspath : str
             Path of the JSON to potentially edit
         """
-        dct = None
-
-        def lazy_load_json():
-            if dct is not None:
-                return dct
-            else:
-                with open(fileset.side_car) as f:
-                    return json.load(f)
+        with open(nifti_x.json_file) as f:
+            json_dict = json.load(f)
 
         # Ensure there is a value for TaskName for files that include 'task-taskname'
         # in their file path
-        if match := re.match(r".*task-([a-zA-Z]+).*", fileset.path):
-            dct = lazy_load_json()
-            if "TaskName" not in dct:
-                dct["TaskName"] = match.group(1)
+        if match := re.match(r".*task-([a-zA-Z]+).*", entry.path):
+            if "TaskName" not in json_dict:
+                json_dict["TaskName"] = match.group(1)
         # Get dictionary containing file paths for all items in the same row
         # as the file-set so they can be used in the edits using Python
         # string templating
-        col_paths = {}
-        for col_name, item in fileset.row.items():
-            rel_path = self.fileset_stem_path(item).relative_to(
-                fileset.row.dataset.root_dir / self.row_path(fileset.row)
-            )
-            col_paths[col_name] = str(rel_path) + fileset.ext
+        col_fspaths = {}
+        for col_name, item in entry.row.items():
+            common_path = os.path.commonpath([nifti_x.fspath, item.fspath])
+            col_fspaths[col_name] = item.fspath.relative_to(common_path)
 
         for jedit in self.json_edits:
-            jq_expr = jedit.jq_expr.format(**col_paths)  # subst col file paths
-            if re.match(jedit.path, fileset.path):
-                dct = jq.compile(jq_expr).input(lazy_load_json()).first()
+            jq_expr = jedit.jq_expr.format(**col_fspaths)  # subst col file paths
+            if re.match(jedit.path, entry.path):
+                json_dict = jq.compile(jq_expr).input(json_dict).first()
         # Write dictionary back to file if it has been loaded
-        if dct is not None:
-            with open(fileset.side_car, "w") as f:
-                json.dump(dct, f)
+        with open(nifti_x.json_file, "w") as f:
+            json.dump(json_dict, f)
 
     @classmethod
     def _extract_entities(cls, relpath):
@@ -460,26 +481,34 @@ class Bids(LocalStore):
                     "BIDS paths should contain at least two '/' delimited parts (e.g. "
                     f"anat/T1w or freesurfer/recon-all), given '{entry_path}'"
                 )
-        fname = f"sub-{subject_id}_"
+        fname = f"sub-{subject_id}"
         relpath = Path(f"sub-{subject_id}")
         if timepoint_id is not None:
-            fname += f"ses-{timepoint_id}_"
+            fname += f"_ses-{timepoint_id}"
             relpath /= f"ses-{timepoint_id}"
         if entry_path is not None:
             entities = []
+            relpath /= parts[0]  # BIDS data type or dataset/pipeline name
             for part in parts[2:]:
                 if "=" in part:
                     entities.append(part.split("="))
                 else:
                     relpath /= part
             fname += (
-                "_".join("-".join(e) for e in sorted(entities, key=itemgetter(0)))
+                "".join(f"_{k}-{v}" for k, v in sorted(entities, key=itemgetter(0)))  # BIDS entities
                 + "_"
-                + parts[1]
+                + parts[1]  # BIDS modality suffix
             )
             relpath /= fname
             if ext:
                 relpath = relpath.with_suffix(ext)
+        return relpath
+
+    @classmethod
+    def _rel_row_path(cls, row: DataRow):
+        relpath = Path(f"sub-{row.ids[Clinical.subject]}")
+        if Clinical.timepoint in row.dataset.hierarchy:
+            relpath /= f"ses-{row.ids[Clinical.timepoint]}"
         return relpath
 
 
@@ -490,8 +519,7 @@ def outputs_converter(outputs):
 
 METADATA_MAPPING = (
     ("name", "Name"),
-    ("bids_version", "BIDSVersion"),
-    ("bids_type", "DatasetType"),
+    ("type", "DatasetType"),
     ("license", "Licence"),
     ("authors", "Authors"),
     ("acknowledgements", "Acknowledgements"),
@@ -532,7 +560,9 @@ METADATA_MAPPING = (
 
 def map_to_bids_names(dct, mappings=METADATA_MAPPING):
     return {
-        m[1]: dct[m[0]] if len(m) == 2 else map_to_bids_names(dict[m[0]], mappings=m[2])
+        m[1]: dct[m[0]]
+        if len(m) == 2
+        else [map_to_bids_names(i, mappings=m[2]) for i in dct[m[0]]]
         for m in mappings
         if dct[m[0]] is not None
     }
@@ -540,7 +570,9 @@ def map_to_bids_names(dct, mappings=METADATA_MAPPING):
 
 def map_from_bids_names(dct, mappings=METADATA_MAPPING):
     return {
-        m[0]: dct[m[1]] if len(m) == 2 else map_to_bids_names(dict[m[1]], mappings=m[2])
+        m[0]: dct[m[1]]
+        if len(m) == 2
+        else [map_to_bids_names(i, mappings=m[2]) for i in dict[m[1]]]
         for m in mappings
         if dct[m[1]] is not None
     }
