@@ -290,22 +290,9 @@ def test_run_bids_app_naked(
     mock_bids_app_script: str, nifti_sample_dir: Path, work_dir: Path
 ):
 
-    kwargs = {}
-    # INPUTS = [Input('anat/T1w', NiftiGzX),
-    #           Input('anat/T2w', NiftiGzX),
-    #           Input('dwi/dwi', NiftiGzXBvec)]
-    # OUTPUTS = [Output('', Directory),  # whole derivative directory
-    #            Output('file1', Text),
-    #            Output('file2', Text)]
-
-    # Build mock BIDS app image
-
     # Create executable that runs validator then produces some mock output
     # files
     launch_sh = work_dir / "launch.sh"
-
-    bids_app_output_dir = work_dir / "output"
-
     # We don't need to run the full validation in this case as it is already tested by test_run_bids_app_docker
     # so we use the simpler test script.
     with open(launch_sh, "w") as f:
@@ -318,9 +305,10 @@ def test_run_bids_app_naked(
         executable=launch_sh,  # Extracted using `docker_image_executable(docker_image)`
         inputs=BIDS_INPUTS,
         outputs=BIDS_OUTPUTS,
-        app_output_dir=bids_app_output_dir,
+        app_output_dir=work_dir / "output",
     )
 
+    kwargs = {}
     for inpt in BIDS_INPUTS:
         kwargs[inpt.name] = nifti_sample_dir.joinpath(
             *inpt.path.split("/")

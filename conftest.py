@@ -10,7 +10,9 @@ from click.testing import CliRunner
 import docker
 from fileformats.medimage import NiftiGzX
 from arcana.core.deploy.image.components import BaseImage
-# Set DEBUG logging for unittests
+from pydra import set_input_validator
+
+# set_input_validator(True)
 
 log_level = logging.WARNING
 

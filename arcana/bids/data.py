@@ -10,6 +10,7 @@ import jq
 from pathlib import Path
 from arcana.core.data.store import LocalStore
 from fileformats.core import FileSet, Field
+from fileformats.generic import Directory
 from fileformats.medimage.nifti import WithBids
 from arcana.core.exceptions import ArcanaUsageError
 from arcana.core.data.tree import DataTree
@@ -71,7 +72,7 @@ class Bids(LocalStore):
 
     PROV_SUFFIX = ".provenance"
     FIELDS_FNAME = "__fields__"
-    FILES_PROV_FNAME = "__fields_provenance__"
+    FIELDS_PROV_FNAME = "__fields_provenance__"
 
     #################################
     # Abstract-method implementations
@@ -96,7 +97,7 @@ class Bids(LocalStore):
             participant_keys = lines[0].split("\t")
             for line in lines[1:]:
                 dct = dict(zip(participant_keys, line.split("\t")))
-                participants[dct.pop("participant_id")[len("sub-"):]] = dct
+                participants[dct.pop("participant_id")[len("sub-") :]] = dct
 
         for subject_dir in root_dir.iterdir():
             if not subject_dir.name.startswith("sub-"):
@@ -114,16 +115,15 @@ class Bids(LocalStore):
                 tree.add_leaf([subject_id], additional_ids=additional_ids)
 
     def scan_row(self, row: DataRow):
-
         root_dir = row.dataset.root_dir
         relpath = self._rel_row_path(row)
         session_path = root_dir / relpath
         session_path.mkdir(exist_ok=True)
         for modality_dir in session_path.iterdir():
             for entry_fspath in modality_dir.iterdir():
-                path = f"{modality_dir.name}/{self._fs2entry_path(entry_fspath)}"
-                suffix = "".join(entry_fspath.suffixes)
-                path = path[: -len(suffix)] + "/" + suffix.lstrip(".")
+                # suffix = "".join(entry_fspath.suffixes)
+                path = self._fs2entry_path(entry_fspath.relative_to(session_path))
+                # path = path.split(".")[0] + "/" + suffix.lstrip(".")
                 row.add_entry(
                     path=path,
                     datatype=FileSet,
@@ -132,25 +132,33 @@ class Bids(LocalStore):
         deriv_dir = root_dir / "derivatives"
         if deriv_dir.exists():
             for pipeline_dir in deriv_dir.iterdir():
-                pipeline_row_dir = (pipeline_dir / relpath)
+                pipeline_row_dir = pipeline_dir / relpath
                 if pipeline_row_dir.exists():
-                    for entry_fspath in (pipeline_dir / relpath).iterdir():
+                    # Add in the whole row directory as an entry
+                    row.add_entry(
+                        path="@" + pipeline_dir.name,
+                        datatype=Directory,
+                        uri=pipeline_row_dir.relative_to(root_dir),
+                    )
+                    for entry_fspath in pipeline_row_dir.iterdir():
                         if not (
                             entry_fspath.name.startswith(".")
                             or entry_fspath.name
-                            not in (self.FIELDS_FNAME, self.FIELDS_PROV_FNAME)
+                            in (self.FIELDS_FNAME, self.FIELDS_PROV_FNAME)
                             or entry_fspath.name.endswith(self.PROV_SUFFIX)
                         ):
                             path = (
-                                f"derivatives/{pipeline_dir.name}/"
+                                "@"
+                                + pipeline_dir.name
+                                + "/"
                                 + self._fs2entry_path(entry_fspath.name)
                             )
-                            suffix = "".join(path.suffixes)
-                            path = path[: -len(suffix)] + "/" + suffix.lstrip(".")
+                            # suffix = "".join(entry_fspath.suffixes)
+                            # path = path[: -len(suffix)] + "/" + suffix.lstrip(".")
                             row.add_entry(
                                 path=path,
                                 datatype=FileSet,
-                                uri="@" + str(entry_fspath.relative_to(root_dir)),
+                                uri=str(entry_fspath.relative_to(root_dir)),
                             )
 
     def fileset_uri(self, path: str, datatype: type, row: DataRow) -> str:
@@ -209,7 +217,9 @@ class Bids(LocalStore):
         fspath = self._fileset_fspath(entry)
         # Create target directory if it doesn't exist already
         copied_fileset = fileset.copy_to(
-            dest_dir=fspath.parent, stem=fspath.name[:-len(fileset.ext)], make_dirs=True
+            dest_dir=fspath.parent,
+            stem=fspath.name[: -len(fileset.ext)],
+            make_dirs=True,
         )
         if isinstance(copied_fileset, WithBids):
             # Ensure TaskName field is present in the JSON side-car if task
@@ -296,7 +306,7 @@ class Bids(LocalStore):
             participants_desc = {
                 "group": {
                     "Description": "the group the participant belonged to",
-                    "Levels": {g: f"{g} group" for g in row_ids["group"]}
+                    "Levels": {g: f"{g} group" for g in row_ids["group"]},
                 }
             }
             with open(root_dir / "participants.json", "w") as f:
@@ -305,7 +315,7 @@ class Bids(LocalStore):
             id=id,
             space=space,
             hierarchy=(
-                ["subject", "timepoint"] if "timepoint" in row_ids else ["subject"]
+                ["subject", "timepoint"] if "timepoint" in row_ids else ["session"]
             ),
             name=name,
             **kwargs,
@@ -409,9 +419,15 @@ class Bids(LocalStore):
         # as the file-set so they can be used in the edits using Python
         # string templating
         col_fspaths = {}
-        for col_name, item in entry.row.items():
-            common_path = os.path.commonpath([nifti_x.fspath, item.fspath])
-            col_fspaths[col_name] = item.fspath.relative_to(common_path)
+        for cell in entry.row.cells():
+            if cell.entry is entry:
+                continue
+            if cell.is_empty:
+                cell_uri = self.fileset_uri(cell.column.path, cell.datatype, entry.row)
+            else:
+                cell_uri = cell.entry.uri
+            common_path = os.path.commonpath([cell_uri, entry.uri])
+            col_fspaths[cell.column.name] = Path(cell_uri).relative_to(common_path)
 
         for jedit in self.json_edits:
             jq_expr = jedit.jq_expr.format(**col_fspaths)  # subst col file paths
@@ -423,12 +439,15 @@ class Bids(LocalStore):
 
     @classmethod
     def _extract_entities(cls, relpath):
+        relpath = Path(relpath)
         path = relpath.parent
-        stem = relpath.name.split(".")[0]
+        name_parts = relpath.name.split(".")
+        stem = name_parts[0]
+        suffix = ".".join(name_parts[1:])
         parts = stem.split("_")
         path /= parts[-1]
         entities = sorted((tuple(p.split("-")) for p in parts[:-1]), key=itemgetter(0))
-        return str(path), entities
+        return str(path), entities, suffix
 
     @classmethod
     def _fs2entry_path(cls, relpath: Path) -> str:
@@ -445,11 +464,11 @@ class Bids(LocalStore):
         entry_path : str
             the "path" of an entry relative to the subject/session row.
         """
-        entry_path, entities = cls._extract_entities(relpath)
+        entry_path, entities, suffix = cls._extract_entities(relpath)
         for key, val in entities:
             if key not in ("sub", "ses"):
                 entry_path += f"/{key}={val}"
-        return entry_path
+        return entry_path + "/" + suffix
 
     @classmethod
     def _entry2fs_path(
@@ -495,7 +514,9 @@ class Bids(LocalStore):
                 else:
                     relpath /= part
             fname += (
-                "".join(f"_{k}-{v}" for k, v in sorted(entities, key=itemgetter(0)))  # BIDS entities
+                "".join(
+                    f"_{k}-{v}" for k, v in sorted(entities, key=itemgetter(0))
+                )  # BIDS entities
                 + "_"
                 + parts[1]  # BIDS modality suffix
             )
