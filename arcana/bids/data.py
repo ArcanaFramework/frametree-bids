@@ -1,4 +1,3 @@
-import os.path
 import typing as ty
 import json
 import re
@@ -342,7 +341,7 @@ class Bids(LocalStore):
                     col_names.append("group")
                 f.write("\t".join(col_names) + "\n")
                 for subject_row in dataset.rows(frequency=Clinical.subject):
-                    rw = [subject_row.id] + [
+                    rw = ["sub-" + subject_row.id] + [
                         subject_row.metadata[k] for k in dataset.metadata.row_keys
                     ]
                     if "group" in col_names:
@@ -412,7 +411,7 @@ class Bids(LocalStore):
 
         # Ensure there is a value for TaskName for files that include 'task-taskname'
         # in their file path
-        if match := re.match(r".*task-([a-zA-Z]+).*", entry.path):
+        if match := re.match(r".*/task=([^/]+)", entry.path):
             if "TaskName" not in json_dict:
                 json_dict["TaskName"] = match.group(1)
         # Get dictionary containing file paths for all items in the same row
@@ -420,15 +419,16 @@ class Bids(LocalStore):
         # string templating
         col_fspaths = {}
         for cell in entry.row.cells():
-            if cell.entry is entry:
-                continue
             if cell.is_empty:
                 cell_uri = self.fileset_uri(cell.column.path, cell.datatype, entry.row)
             else:
                 cell_uri = cell.entry.uri
-            common_path = os.path.commonpath([cell_uri, entry.uri])
-            col_fspaths[cell.column.name] = Path(cell_uri).relative_to(common_path)
-
+            try:
+                col_fspaths[cell.column.name] = Path(cell_uri).relative_to(
+                    self._rel_row_path(entry.row)
+                )
+            except ValueError:
+                pass
         for jedit in self.json_edits:
             jq_expr = jedit.jq_expr.format(**col_fspaths)  # subst col file paths
             if re.match(jedit.path, entry.path):

@@ -145,7 +145,7 @@ JSON_EDIT_TESTS = {
         jq_script='.IntendedFor = "{bold}"',
         source_niftis={
             "bold": SourceNiftiXBlueprint(
-                path="func/task-rest_bold",
+                path="func/bold/task=rest",
                 orig_side_car={},
                 edited_side_car={"TaskName": "rest"},
             ),
@@ -238,7 +238,7 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
     for sf_name, sf_bp in bp.source_niftis.items():
 
         item = dataset[sf_name][("1", "1")]
-        with open(item.side_car("json")) as f:
+        with open(item.json_file) as f:
             saved_dict = json.load(f)
 
         assert saved_dict == sf_bp.edited_side_car
@@ -278,7 +278,7 @@ def test_run_bids_app_docker(
     for inpt in BIDS_INPUTS:
         kwargs[inpt.name] = nifti_sample_dir.joinpath(
             *inpt.path.split("/")
-        ).with_suffix("." + inpt.datatype.ext)
+        ).with_suffix(inpt.datatype.ext)
 
     result = task(plugin="serial", **kwargs)
 
