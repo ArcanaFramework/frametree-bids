@@ -78,7 +78,7 @@ class Bids(LocalStore):
     # Abstract-method implementations
     #################################
 
-    def scan_tree(self, tree: DataTree):
+    def populate_tree(self, tree: DataTree):
         """
         Find all rows within the dataset stored in the store and
         construct the data tree within the dataset
@@ -114,7 +114,7 @@ class Bids(LocalStore):
             else:
                 tree.add_leaf([subject_id], additional_ids=additional_ids)
 
-    def scan_row(self, row: DataRow):
+    def populate_row(self, row: DataRow):
         root_dir = row.dataset.root_dir
         relpath = self._rel_row_path(row)
         session_path = root_dir / relpath
