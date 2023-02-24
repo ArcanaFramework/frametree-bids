@@ -98,7 +98,7 @@ def test_bids_app_entrypoint(
         authors=[{"name": "Some One", "email": "some.one@an.email.org"}],
         info_url="http://concatenate.readthefakedocs.io",
         command={
-            "task": "arcana.bids.tasks.app:bids_app",
+            "task": "arcana.bids.tasks:bids_app",
             "row_frequency": "medimage:Clinical[session]",
             "inputs": inputs_config,
             "outputs": outputs_config,
