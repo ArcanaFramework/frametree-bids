@@ -532,6 +532,9 @@ class Bids(LocalStore):
             relpath /= f"ses-{row.ids[Clinical.timepoint]}"
         return relpath
 
+    def definition_save_path(self, dataset_id, name):
+        return Path(dataset_id) / "derivatives" / name / "definition.yaml"
+
 
 def outputs_converter(outputs):
     """Sets the path of an output to '' if not provided or None"""
