@@ -1,14 +1,18 @@
 import os
 import logging
+from warnings import warn
 import pytest
 import tempfile
+import requests.exceptions
 from pathlib import Path
 from tempfile import mkdtemp
 from click.testing import CliRunner
 import docker
 from fileformats.medimage import NiftiGzX
 from arcana.core.deploy.image.components import BaseImage
-# Set DEBUG logging for unittests
+from pydra import set_input_validator
+
+# set_input_validator(True)
 
 log_level = logging.WARNING
 
@@ -93,8 +97,8 @@ def mock_bids_app_script():
     ]:
         subdir, suffix = inpt_path.split("/")
         file_tests += f"""
-        if [ ! -f "$BIDS_DATASET/sub-${{SUBJ_ID}}/{subdir}/sub-${{SUBJ_ID}}_{suffix}.{datatype.ext}" ]; then
-            echo "Did not find {suffix} file at $BIDS_DATASET/sub-${{SUBJ_ID}}/{subdir}/sub-${{SUBJ_ID}}_{suffix}.{datatype.ext}"
+        if [ ! -f "$BIDS_DATASET/sub-${{SUBJ_ID}}/{subdir}/sub-${{SUBJ_ID}}_{suffix}{datatype.ext}" ]; then
+            echo "Did not find {suffix} file at $BIDS_DATASET/sub-${{SUBJ_ID}}/{subdir}/sub-${{SUBJ_ID}}_{suffix}{datatype.ext}"
             exit 1;
         fi
         """
@@ -130,7 +134,10 @@ def bids_success_str():
 @pytest.fixture(scope="session")
 def bids_validator_docker():
     dc = docker.from_env()
-    dc.images.pull(BIDS_VALIDATOR_DOCKER)
+    try:
+        dc.images.pull(BIDS_VALIDATOR_DOCKER)
+    except requests.exceptions.HTTPError:
+        warn("No internet connection, so couldn't download latest BIDS validator")
     return BIDS_VALIDATOR_DOCKER
 
 
@@ -202,7 +209,7 @@ def bids_command_spec(mock_bids_app_executable):
             "configuration": {
                 "path": "dwi/dwi",
             },
-            "datatype": "medimage:NiftiGzXFslgrad",
+            "datatype": "medimage:NiftiGzXBvec",
             "help_string": "DWI-weighted image",
         },
     }
@@ -225,7 +232,7 @@ def bids_command_spec(mock_bids_app_executable):
     }
 
     return {
-        "task": "arcana.bids.analysis.tasks.app:bids_app",
+        "task": "arcana.bids.tasks:bids_app",
         "inputs": inputs,
         "outputs": outputs,
         "row_frequency": "session",

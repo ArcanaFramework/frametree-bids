@@ -1,14 +1,14 @@
 from functools import reduce
 from operator import mul
 import pytest
-from fileformats.common import Text
-from arcana.core.data.store import TestDatasetBlueprint
+from fileformats.text import Plain as Text
+from arcana.core.data.testing import TestDatasetBlueprint
 from arcana.core.data.space import Clinical
 from fileformats.medimage import NiftiGzX
 from arcana.bids.cli import app_entrypoint
 from arcana.core.utils.serialize import ClassResolver
 from arcana.core.utils.misc import path2varname
-from arcana.core.utils.testing import show_cli_trace
+from arcana.core.utils.misc import show_cli_trace
 from arcana.core.deploy import App
 from arcana.bids.data import Bids
 
@@ -52,7 +52,7 @@ def test_bids_app_entrypoint(
 
     blueprint = dataset.__annotations__["blueprint"]
 
-    dataset_locator = f"file//{dataset_path}"
+    dataset_locator = f"{dataset_path}"
     # Start generating the arguments for the CLI
     # Add source to loaded dataset
     args = [
@@ -98,7 +98,7 @@ def test_bids_app_entrypoint(
         authors=[{"name": "Some One", "email": "some.one@an.email.org"}],
         info_url="http://concatenate.readthefakedocs.io",
         command={
-            "task": "arcana.bids.analysis.tasks.app:bids_app",
+            "task": "arcana.bids.tasks:bids_app",
             "row_frequency": "medimage:Clinical[session]",
             "inputs": inputs_config,
             "outputs": outputs_config,
@@ -106,6 +106,9 @@ def test_bids_app_entrypoint(
                 "executable": str(mock_bids_app_executable),
             },
         },
+        packages={
+            "pip": ["arcana-bids"]
+        }
     )
     image_spec.save(spec_path)
 
@@ -117,6 +120,6 @@ def test_bids_app_entrypoint(
         assert len(sink) == reduce(mul, blueprint.dim_lengths)
         for item in sink:
             item.get(assume_exists=True)
-            with open(item.fs_path) as f:
+            with open(item.fspath) as f:
                 contents = f.read()
             assert contents == fname + "\n"

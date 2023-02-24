@@ -3,6 +3,8 @@ import stat
 import typing as ty
 import json
 from pathlib import Path
+from warnings import warn
+import requests.exceptions
 import nibabel as nb
 import numpy.random
 import shutil
@@ -10,10 +12,11 @@ from dataclasses import dataclass
 import pytest
 import docker
 from arcana.core import __version__
-from fileformats.medimage import NiftiX, NiftiGzX, NiftiGzXFslgrad
-from arcana.bids.data import BidsDataset
-from arcana.bids.analysis.tasks.app import bids_app, BidsInput, BidsOutput
-from fileformats.common import Text, Directory
+from fileformats.medimage import NiftiX, NiftiGzX, NiftiGzXBvec
+from arcana.bids.data import Bids
+from arcana.bids.tasks import bids_app, BidsInput, BidsOutput
+from fileformats.text import Plain as Text
+from fileformats.generic import Directory
 
 
 MOCK_BIDS_APP_NAME = "mockapp"
@@ -24,26 +27,30 @@ MOCK_AUTHORS = ["Dumm Y. Author", "Another D. Author"]
 def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
 
     path = work_dir / "bids-dataset"
-    name = "bids-dataset"
+    dataset_name = "adataset"
 
     shutil.rmtree(path, ignore_errors=True)
-    dataset = BidsDataset.create(
-        path,
-        name,
-        subject_ids=[str(i) for i in range(1, 4)],
-        session_ids=[str(i) for i in range(1, 3)],
-        readme=MOCK_README,
-        authors=MOCK_AUTHORS,
+    dataset = Bids().create_empty_dataset(
+        id=path,
+        name=dataset_name,
+        row_ids={
+            "subject": [str(i) for i in range(1, 4)],
+            "timepoint": [str(i) for i in range(1, 3)],
+            "group": ["test", "control"],
+        },
+        metadata={
+            "readme": MOCK_README,
+            "authors": MOCK_AUTHORS,
+            "generated_by": [
+                {
+                    "name": "arcana",
+                    "version": __version__,
+                    "description": "Dataset was created programmatically from scratch",
+                    "code_url": "http://arcana.readthedocs.io",
+                }
+            ]
+        },
     )
-
-    dataset.add_generator_metadata(
-        name="arcana",
-        version=__version__,
-        description="Dataset was created programmatically from scratch",
-        code_url="http://arcana.readthedocs.io",
-    )
-
-    dataset.save_metadata()
 
     dataset.add_sink("t1w", datatype=NiftiX, path="anat/T1w")
 
@@ -70,12 +77,14 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
         json.dump({"test": "json-file"}, f)
 
     for row in dataset.rows(frequency="session"):
-        item = row["t1w"]
-        item.put(dummy_nifti, dummy_json)
+        row["t1w"] = (dummy_nifti, dummy_json)
 
     # Full dataset validation using dockerized validator
     dc = docker.from_env()
-    dc.images.pull(bids_validator_docker)
+    try:
+        dc.images.pull(bids_validator_docker)
+    except requests.exceptions.HTTPError:
+        warn("No internet connection, so couldn't download latest BIDS validator")
     result = dc.containers.run(
         bids_validator_docker,
         "/data",
@@ -85,7 +94,7 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
     ).decode("utf-8")
     assert bids_success_str in result
 
-    reloaded = BidsDataset.load(path)
+    reloaded = Bids().load_dataset(id=path, name=dataset_name)
     reloaded.add_sink("t1w", datatype=NiftiX, path="anat/T1w")
 
     assert dataset == reloaded
@@ -136,7 +145,7 @@ JSON_EDIT_TESTS = {
         jq_script='.IntendedFor = "{bold}"',
         source_niftis={
             "bold": SourceNiftiXBlueprint(
-                path="func/task-rest_bold",
+                path="func/bold/task=rest",
                 orig_side_car={},
                 edited_side_car={"TaskName": "rest"},
             ),
@@ -173,31 +182,36 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
     name = "bids-dataset"
 
     shutil.rmtree(path, ignore_errors=True)
-    dataset = BidsDataset.create(
-        path,
-        name,
-        subject_ids=["1"],
-        session_ids=["1"],
-        readme=MOCK_README,
-        authors=MOCK_AUTHORS,
+    dataset = Bids(
         json_edits=[(bp.path_re, bp.jq_script)],
+    ).create_empty_dataset(
+        id=path,
+        name=name,
+        row_ids={
+            "subject": ["1"],
+            "timepoint": ["1"],
+        },
+        metadata={
+            "readme": MOCK_README,
+            "authors": MOCK_AUTHORS,
+            "generated_by": [
+                {
+                    "name": "arcana",
+                    "version": __version__,
+                    "description": "Dataset was created programmatically from scratch",
+                    "code_url": "http://arcana.readthedocs.io",
+                }
+            ]
+        },
+        
     )
-
-    dataset.add_generator_metadata(
-        name="arcana",
-        version=__version__,
-        description="Dataset was created programmatically from scratch",
-        code_url="http://arcana.readthedocs.io",
-    )
-
-    dataset.save_metadata()
 
     for sf_name, sf_bp in bp.source_niftis.items():
         dataset.add_sink(sf_name, datatype=NiftiX, path=sf_bp.path)
 
-        nifti_fs_path = work_dir / (sf_name + ".nii")
+        nifti_fspath = work_dir / (sf_name + ".nii")
         # dummy_nifti_gz = dummy_nifti + '.gz'
-        json_fs_path = work_dir / (sf_name + ".json")
+        json_fspath = work_dir / (sf_name + ".json")
 
         # Create a random Nifti file to satisfy BIDS parsers
         hdr = nb.Nifti1Header()
@@ -211,23 +225,20 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
                 hdr.get_best_affine(),
                 header=hdr,
             ),
-            nifti_fs_path,
+            nifti_fspath,
         )
 
-        with open(json_fs_path, "w") as f:
+        with open(json_fspath, "w") as f:
             json.dump(sf_bp.orig_side_car, f)
 
         # Get single item in dataset
-        item = dataset[sf_name][("ses-1", "sub-1")]
-
-        # Put file paths in item
-        item.put(nifti_fs_path, json_fs_path)
+        dataset[sf_name][("1", "1")] = (nifti_fspath, json_fspath)
 
     # Check edited JSON matches reference
     for sf_name, sf_bp in bp.source_niftis.items():
 
-        item = dataset[sf_name][("ses-1", "sub-1")]
-        with open(item.side_car("json")) as f:
+        item = dataset[sf_name][("1", "1")]
+        with open(item.json_file) as f:
             saved_dict = json.load(f)
 
         assert saved_dict == sf_bp.edited_side_car
@@ -236,7 +247,7 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
 BIDS_INPUTS = [
     BidsInput(name="T1w", path="anat/T1w", datatype=NiftiGzX),
     BidsInput(name="T2w", path="anat/T2w", datatype=NiftiGzX),
-    BidsInput(name="dwi", path="dwi/dwi", datatype=NiftiGzXFslgrad),
+    BidsInput(name="dwi", path="dwi/dwi", datatype=NiftiGzXBvec),
 ]
 BIDS_OUTPUTS = [
     BidsOutput(name="whole_dir", datatype=Directory),  # whole derivative directory
@@ -267,7 +278,7 @@ def test_run_bids_app_docker(
     for inpt in BIDS_INPUTS:
         kwargs[inpt.name] = nifti_sample_dir.joinpath(
             *inpt.path.split("/")
-        ).with_suffix("." + inpt.datatype.ext)
+        ).with_suffix(inpt.datatype.ext)
 
     result = task(plugin="serial", **kwargs)
 
@@ -279,22 +290,9 @@ def test_run_bids_app_naked(
     mock_bids_app_script: str, nifti_sample_dir: Path, work_dir: Path
 ):
 
-    kwargs = {}
-    # INPUTS = [Input('anat/T1w', NiftiGzX),
-    #           Input('anat/T2w', NiftiGzX),
-    #           Input('dwi/dwi', NiftiGzXFslgrad)]
-    # OUTPUTS = [Output('', Directory),  # whole derivative directory
-    #            Output('file1', Text),
-    #            Output('file2', Text)]
-
-    # Build mock BIDS app image
-
     # Create executable that runs validator then produces some mock output
     # files
     launch_sh = work_dir / "launch.sh"
-
-    bids_app_output_dir = work_dir / "output"
-
     # We don't need to run the full validation in this case as it is already tested by test_run_bids_app_docker
     # so we use the simpler test script.
     with open(launch_sh, "w") as f:
@@ -307,13 +305,14 @@ def test_run_bids_app_naked(
         executable=launch_sh,  # Extracted using `docker_image_executable(docker_image)`
         inputs=BIDS_INPUTS,
         outputs=BIDS_OUTPUTS,
-        app_output_dir=bids_app_output_dir,
+        app_output_dir=work_dir / "output",
     )
 
+    kwargs = {}
     for inpt in BIDS_INPUTS:
         kwargs[inpt.name] = nifti_sample_dir.joinpath(
             *inpt.path.split("/")
-        ).with_suffix("." + inpt.datatype.ext)
+        ).with_suffix(inpt.datatype.ext)
 
     bids_dir = work_dir / "bids"
 
