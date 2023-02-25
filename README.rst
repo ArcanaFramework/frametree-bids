@@ -4,14 +4,11 @@ Arcana Extension - bids
    :target: https://github.com/arcanaframework/arcana-bids/actions/workflows/tests.yml
 .. image:: https://codecov.io/gh/arcanaframework/arcana-bids/branch/main/graph/badge.svg?token=UIS0OGPST7
    :target: https://codecov.io/gh/arcanaframework/arcana-bids
-.. image:: https://readthedocs.org/projects/arcana/badge/?version=latest
-  :target: http://arcana.readthedocs.io/en/latest/?badge=latest
-  :alt: Documentation Status
-.. image:: https://img.shields.io/pypi/pyversions/arcana.svg
-   :target: https://pypi.python.org/pypi/arcana/
+.. image:: https://img.shields.io/pypi/pyversions/arcana-bids.svg
+   :target: https://pypi.python.org/pypi/arcana-bids/
    :alt: Python versions
-.. image:: https://img.shields.io/pypi/v/arcana.svg
-   :target: https://pypi.python.org/pypi/arcana/
+.. image:: https://img.shields.io/pypi/v/arcana-bids.svg
+   :target: https://pypi.python.org/pypi/arcana-bids/
    :alt: Latest Version  
 .. image:: https://github.com/ArcanaFramework/arcana/actions/workflows/docs.yml/badge.svg
    :target: http://arcana.readthedocs.io/en/latest/?badge=latest
