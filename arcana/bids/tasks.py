@@ -375,9 +375,11 @@ def extract_bids(
     output_paths = []
     row = dataset.row(row_frequency, id)
     for output in outputs:
-        path = "@" + app_name
         if output.path:
-            path += "/" + output.path
+            path = output.path
+        else:
+            path = ""  # whole directory
+        path += "@" + app_name
         dataset.add_sink(
             output.name,
             output.datatype,

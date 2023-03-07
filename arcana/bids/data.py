@@ -148,10 +148,9 @@ class Bids(LocalStore):
                             or entry_fspath.name.endswith(self.PROV_SUFFIX)
                         ):
                             path = (
-                                "@"
+                                self._fs2entry_path(entry_fspath.name)
+                                + "@"
                                 + pipeline_dir.name
-                                + "/"
-                                + self._fs2entry_path(entry_fspath.name)
                             )
                             # suffix = "".join(entry_fspath.suffixes)
                             # path = path[: -len(suffix)] + "/" + suffix.lstrip(".")
@@ -162,11 +161,13 @@ class Bids(LocalStore):
                             )
 
     def fileset_uri(self, path: str, datatype: type, row: DataRow) -> str:
-        if path.startswith("@"):  # derivative
-            base_uri = "derivatives/"
-            path = path[1:]
-        else:
+        path, dataset_name = DataEntry.split_dataset_name_from_path(path)
+        if dataset_name is None:
             base_uri = ""
+        elif not dataset_name:
+            base_uri = f"derivatives/{Dataset.EMPTY_NAME}"
+        else:
+            base_uri = f"derivatives/{dataset_name}"
         return base_uri + str(
             self._entry2fs_path(
                 path,
@@ -181,11 +182,13 @@ class Bids(LocalStore):
         )
 
     def field_uri(self, path: str, datatype: type, row: DataRow) -> str:
-        if path.startswith("@"):  # derivative
-            base_uri = "derivatives/"
-            path = path[1:]
-        else:
+        path, dataset_name = DataEntry.split_dataset_name_from_path(path)
+        if dataset_name is None:
             base_uri = ""
+        elif not dataset_name:
+            base_uri = f"derivatives/{Dataset.EMPTY_NAME}"
+        else:
+            base_uri = f"derivatives/{dataset_name}"
         try:
             namespace, field_name = path.split("/")
         except ValueError:
@@ -220,6 +223,7 @@ class Bids(LocalStore):
             dest_dir=fspath.parent,
             stem=fspath.name[: -len(fileset.ext)],
             make_dirs=True,
+            overwrite=entry.is_derivative,
         )
         if isinstance(copied_fileset, WithBids):
             # Ensure TaskName field is present in the JSON side-car if task
