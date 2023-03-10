@@ -30,7 +30,7 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
     dataset_name = "adataset"
 
     shutil.rmtree(path, ignore_errors=True)
-    dataset = Bids().create_empty_dataset(
+    dataset = Bids().create_data_tree(
         id=path,
         name=dataset_name,
         row_ids={
@@ -184,7 +184,7 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
     shutil.rmtree(path, ignore_errors=True)
     dataset = Bids(
         json_edits=[(bp.path_re, bp.jq_script)],
-    ).create_empty_dataset(
+    ).create_data_tree(
         id=path,
         name=name,
         row_ids={

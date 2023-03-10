@@ -2,7 +2,7 @@ from functools import reduce
 from operator import mul
 import pytest
 from fileformats.text import Plain as Text
-from arcana.core.data.testing import TestDatasetBlueprint
+from arcana.testing.data.blueprint import TestDatasetBlueprint
 from arcana.core.data.space import Clinical
 from fileformats.medimage import NiftiGzX
 from arcana.bids.cli import app_entrypoint

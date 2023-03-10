@@ -3,7 +3,6 @@ import typing as ty
 import json
 import re
 import logging
-import itertools
 from operator import itemgetter
 import attrs
 import jq
@@ -261,42 +260,27 @@ class Bids(LocalStore):
         fspath, key = self._fields_prov_fspath_and_key(entry)
         self.update_json(fspath, key, provenance)
 
-    # Override method in base to use sub-classed metadata
-    # def define_dataset(self, *args, metadata=None, **kwargs):
-    #     return super().define_dataset(*args, metadata=self._convert_metadata(metadata), **kwargs)
-
-    # def _convert_metadata(self, metadata):
-    #     if metadata is None:
-    #         metadata = {}
-    #     elif isinstance(metadata, DatasetMetadata):
-    #         metadata = attrs.asdict(metadata)
-    #     metadata = BidsMetadata(**metadata)
-    #     return metadata
-
-    ###############
-    # Other methods
-    ###############
-
-    def create_empty_dataset(
+    def create_data_tree(
         self,
         id: str,
-        row_ids: dict[str, list[str]],
+        leaves: list[tuple[str, ...]],
+        hierarchy: list[str],
         space: type = Clinical,
-        name: str = None,
-        **kwargs,
     ):
         root_dir = Path(id)
         root_dir.mkdir(parents=True)
-        group_ids = {}
+        group_ids = set()
+        subject_group_ids = {}
         # Create sub-directories corresponding to rows of the dataset
-        for ids_tuple in itertools.product(*row_ids.values()):
-            ids = dict(zip(row_ids, ids_tuple))
+        for ids_tuple in leaves:
+            ids = dict(zip(hierarchy, ids_tuple))
             subject_id = ids["subject"]
             timepoint_id = ids.get("timepoint")
             group_id = ids.get("group")
             if group_id is not None:
+                group_ids.add(group_id)
                 subject_id = group_id + str(subject_id)
-                group_ids[subject_id] = group_id
+                subject_group_ids[subject_id] = group_id
             sess_dir_fspath = root_dir / self._entry2fs_path(
                 entry_path=None, subject_id=subject_id, timepoint_id=timepoint_id
             )
@@ -305,27 +289,20 @@ class Bids(LocalStore):
         if group_ids:
             with open(root_dir / "participants.tsv", "w") as f:
                 f.write("participant_id\tgroup\n")
-                for subject_id, group_id in group_ids.items():
+                for subject_id, group_id in subject_group_ids.items():
                     f.write(f"sub-{subject_id}\t{group_id}\n")
             participants_desc = {
                 "group": {
                     "Description": "the group the participant belonged to",
-                    "Levels": {g: f"{g} group" for g in row_ids["group"]},
+                    "Levels": {g: f"{g} group" for g in group_ids},
                 }
             }
             with open(root_dir / "participants.json", "w") as f:
                 json.dump(participants_desc, f)
-        dataset = self.define_dataset(
-            id=id,
-            space=space,
-            hierarchy=(
-                ["subject", "timepoint"] if "timepoint" in row_ids else ["session"]
-            ),
-            name=name,
-            **kwargs,
-        )
-        dataset.save()
-        return dataset
+
+    ###############
+    # Other methods
+    ###############
 
     def save_dataset(
         self, dataset: Dataset, name: str = None, overwrite_metadata: bool = False
@@ -377,11 +354,6 @@ class Bids(LocalStore):
             else:
                 with open(readme_path, "w") as f:
                     f.write(dataset.metadata.readme)
-
-    # def load_dataset(self, id, name=None):
-    #     from arcana.core.data.set import (
-    #         Dataset,
-    #     )  # avoid circular imports it is imported here rather than at the top of the file
 
     ################
     # Helper methods
