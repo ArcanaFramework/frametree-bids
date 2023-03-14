@@ -4,6 +4,7 @@ import json
 import re
 import logging
 from operator import itemgetter
+from copy import copy
 import attrs
 import jq
 from pathlib import Path
@@ -90,14 +91,14 @@ class Bids(LocalStore):
         root_dir = Path(tree.dataset.id)
         participants_fspath = root_dir / "participants.tsv"
         participants = {}
-        with open(participants_fspath) as f:
-            lines = f.read().splitlines()
-        if lines:
-            participant_keys = lines[0].split("\t")
-            for line in lines[1:]:
-                dct = dict(zip(participant_keys, line.split("\t")))
-                participants[dct.pop("participant_id")[len("sub-") :]] = dct
-
+        if participants_fspath.exists():
+            with open(participants_fspath) as f:
+                lines = f.read().splitlines()
+            if lines:
+                participant_keys = lines[0].split("\t")
+                for line in lines[1:]:
+                    dct = dict(zip(participant_keys, line.split("\t")))
+                    participants[dct.pop("participant_id")[len("sub-") :]] = dct
         for subject_dir in root_dir.iterdir():
             if not subject_dir.name.startswith("sub-"):
                 continue
@@ -108,8 +109,10 @@ class Bids(LocalStore):
                 additional_ids = {}
             if any(d.name.startswith("ses-") for d in subject_dir.iterdir()):
                 for sess_dir in subject_dir.iterdir():
-                    sess_id = sess_dir.name[len("ses-") :]
-                    tree.add_leaf([subject_id, sess_id], additional_ids=additional_ids)
+                    timepoint_id = sess_dir.name[len("ses-") :]
+                    sess_add_ids = copy(additional_ids)
+                    sess_add_ids["session"] = f"sub-{subject_id}_ses-{timepoint_id}"
+                    tree.add_leaf([subject_id, timepoint_id], additional_ids=sess_add_ids)
             else:
                 tree.add_leaf([subject_id], additional_ids=additional_ids)
 
@@ -265,15 +268,18 @@ class Bids(LocalStore):
         id: str,
         leaves: list[tuple[str, ...]],
         hierarchy: list[str],
-        space: type = Clinical,
+        id_composition: dict[str, str] = None,
+        **kwargs
     ):
         root_dir = Path(id)
         root_dir.mkdir(parents=True)
+        # Create sub-directories corresponding to rows of the dataset
         group_ids = set()
         subject_group_ids = {}
-        # Create sub-directories corresponding to rows of the dataset
         for ids_tuple in leaves:
             ids = dict(zip(hierarchy, ids_tuple))
+            # Add in composed IDs
+            ids.update(Dataset.decompose_ids(ids, id_composition))
             if "session" in hierarchy:
                 subject_id = ids["session"]
                 timepoint_id = None
@@ -284,83 +290,29 @@ class Bids(LocalStore):
                 timepoint_id = ids["timepoint"]
                 assert "session" not in ids
             group_id = ids.get("group")
-            if group_id is not None:
+            if group_id:
                 group_ids.add(group_id)
-                subject_id = group_id + str(subject_id)
                 subject_group_ids[subject_id] = group_id
             sess_dir_fspath = root_dir / self._entry2fs_path(
                 entry_path=None, subject_id=subject_id, timepoint_id=timepoint_id
             )
             sess_dir_fspath.mkdir(parents=True)
-        # Save group IDs in participants TSV
+        # Add participants.tsv to define the groups if present
         if group_ids:
             with open(root_dir / "participants.tsv", "w") as f:
                 f.write("participant_id\tgroup\n")
                 for subject_id, group_id in subject_group_ids.items():
                     f.write(f"sub-{subject_id}\t{group_id}\n")
-            participants_desc = {
-                "group": {
-                    "Description": "the group the participant belonged to",
-                    "Levels": {g: f"{g} group" for g in group_ids},
-                }
-            }
-            with open(root_dir / "participants.json", "w") as f:
-                json.dump(participants_desc, f)
 
     ####################
     # Overrides of API #
     ####################
 
     def save_dataset(
-        self, dataset: Dataset, name: str = None, overwrite_metadata: bool = False
+        self, dataset: Dataset, name: str = None, overwrite_bids_metadata: bool = False
     ):
-
         super().save_dataset(dataset, name=name)
-        root_dir = Path(dataset.id)
-        participants_fspath = root_dir / "participants.tsv"
-        if participants_fspath.exists() and not overwrite_metadata:
-            logger.warning(
-                "Not attempting to overwrite existing BIDS dataset description at "
-                f"'{str(participants_fspath)}"
-            )
-        else:
-            with open(participants_fspath, "w") as f:
-                col_names = ["participant_id"] + dataset.metadata.row_keys
-                if len(dataset.row_ids(Clinical.group)) > 1:
-                    col_names.append("group")
-                f.write("\t".join(col_names) + "\n")
-                for subject_row in dataset.rows(frequency=Clinical.subject):
-                    rw = ["sub-" + subject_row.id] + [
-                        subject_row.metadata[k] for k in dataset.metadata.row_keys
-                    ]
-                    if "group" in col_names:
-                        rw.append(subject_row.frequency_id("group"))
-                    f.write("\t".join(rw) + "\n")
-
-        dataset_description_fspath = root_dir / "dataset_description.json"
-        if dataset_description_fspath.exists() and not overwrite_metadata:
-            logger.warning(
-                "Not attempting to overwrite existing BIDS dataset description at "
-                f"'{str(dataset_description_fspath)}"
-            )
-        else:
-            dataset_description = map_to_bids_names(
-                attrs.asdict(dataset.metadata, recurse=True)
-            )
-            dataset_description["BIDSVersion"] = self.BIDS_VERSION
-            with open(dataset_description_fspath, "w") as f:
-                json.dump(dataset_description, f, indent="    ")
-
-        if dataset.metadata.readme is not None:
-            readme_path = root_dir / "README"
-            if readme_path.exists() and not overwrite_metadata:
-                logger.warning(
-                    "Not attempting to overwrite existing BIDS dataset description at "
-                    f"'{str(dataset_description_fspath)}"
-                )
-            else:
-                with open(readme_path, "w") as f:
-                    f.write(dataset.metadata.readme)
+        self._save_metadata(dataset, overwrite_bids_metadata=overwrite_bids_metadata)
 
     def new_dataset(
         self,
@@ -392,26 +344,97 @@ class Bids(LocalStore):
         Dataset
             the newly created dataset
         """
-        return super().new_dataset(
+        dataset = super().new_dataset(
             id=id, leaves=leaves, hierarchy=hierarchy, space=space, name=name, **kwargs
         )
+        self._save_metadata(dataset, overwrite_bids_metadata=True)
+        return dataset
 
     ################
     # Helper methods
     ################
 
-    def _fileset_fspath(self, entry):
+    def _save_metadata(self, dataset: Dataset, overwrite_bids_metadata: bool = False):
+        root_dir = Path(dataset.id)
+        dataset_description_fspath = root_dir / "dataset_description.json"
+        if dataset_description_fspath.exists() and not overwrite_bids_metadata:
+            logger.warning(
+                "Not attempting to overwrite existing BIDS dataset description at "
+                "'%s, use 'overwrite_bids_metadata' to "
+                "force.",
+                str(dataset_description_fspath),
+            )
+        else:
+            dataset_description = map_to_bids_names(
+                attrs.asdict(dataset.metadata, recurse=True)
+            )
+            dataset_description["BIDSVersion"] = self.BIDS_VERSION
+            with open(dataset_description_fspath, "w") as f:
+                json.dump(dataset_description, f, indent="    ")
+
+        if dataset.metadata.readme is not None:
+            readme_path = root_dir / "README"
+            if readme_path.exists() and not overwrite_bids_metadata:
+                logger.warning(
+                    "Not attempting to overwrite existing BIDS dataset description at "
+                    "%s, use 'overwrite_bids_metadata' to "
+                    "force.",
+                    str(readme_path),
+                )
+            else:
+                with open(readme_path, "w") as f:
+                    f.write(dataset.metadata.readme)
+        participants_tsv_fspath = dataset.root_dir / "participants.tsv"
+        columns = list(dataset.metadata.row_metadata)
+        group_ids = [i for i in dataset.row_ids("group") if i is not None]
+        if group_ids or columns:
+            if participants_tsv_fspath.exists() and not overwrite_bids_metadata:
+                logger.warning(
+                    "Not attempting to overwrite existing BIDS participants TSV at "
+                    "%s, use 'overwrite_bids_metadata' to "
+                    "force.",
+                    str(participants_tsv_fspath),
+                )
+            else:
+                with open(dataset.root_dir / "participants.tsv", "w") as f:
+                    f.write("participant_id")
+                    if group_ids:
+                        f.write("\tgroup")
+                    if columns:
+                        f.write("\t" + "\t".join(columns))
+                    f.write("\n")
+                    for row in dataset.rows("subject"):
+                        f.write(
+                            f"sub-{row.id}"
+                        )
+                        if group_ids:
+                            f.write("\t" + row.frequency_id('group'))
+                        if columns:
+                            f.write("\t" + "\t".join(row.metadata[k] for k in columns))
+                        f.write("\n")
+                participants_desc = {}
+                if group_ids:
+                    participants_desc["group"] = {
+                        "Description": "the group the participant belonged to",
+                        "Levels": {g: f"{g} group" for g in dataset.row_ids("group")},
+                    }
+                for name, desc in dataset.metadata.row_metadata.items():
+                    participants_desc[name] = {"Description": desc}
+                with open(dataset.root_dir / "participants.json", "w") as f:
+                    json.dump(participants_desc, f)
+
+    def _fileset_fspath(self, entry: DataEntry) -> Path:
         return Path(entry.row.dataset.id) / entry.uri
 
-    def _fields_fspath_and_key(self, entry):
+    def _fields_fspath_and_key(self, entry: DataEntry) -> tuple[Path, str]:
         relpath, key = entry.uri.split("::")
         fspath = Path(entry.row.dataset.id) / relpath
         return fspath, key
 
-    def _fileset_prov_fspath(self, entry):
+    def _fileset_prov_fspath(self, entry: DataEntry) -> Path:
         return self._fileset_fspath(entry).with_suffix(self.PROV_SUFFIX)
 
-    def _fields_prov_fspath_and_key(self, entry):
+    def _fields_prov_fspath_and_key(self, entry: DataEntry) -> tuple[Path, str]:
         fields_fspath, key = self._fields_fspath_and_key(entry)
         return fields_fspath.parent / self.FIELDS_PROV_FNAME, key
 
@@ -456,7 +479,7 @@ class Bids(LocalStore):
             json.dump(json_dict, f)
 
     @classmethod
-    def _extract_entities(cls, relpath):
+    def _extract_entities(cls, relpath: Path) -> tuple[str, list[str], str]:
         relpath = Path(relpath)
         path = relpath.parent
         name_parts = relpath.name.split(".")
@@ -544,13 +567,13 @@ class Bids(LocalStore):
         return relpath
 
     @classmethod
-    def _rel_row_path(cls, row: DataRow):
+    def _rel_row_path(cls, row: DataRow) -> Path:
         relpath = Path(f"sub-{row.frequency_id('subject')}")
         if "timepoint" in row.dataset.hierarchy:
             relpath /= f"ses-{row.frequency_id('timepoint')}"
         return relpath
 
-    def definition_save_path(self, dataset_id, name):
+    def definition_save_path(self, dataset_id: str, name: str) -> Path:
         return Path(dataset_id) / "derivatives" / name / "definition.yaml"
 
 

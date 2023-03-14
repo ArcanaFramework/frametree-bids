@@ -102,7 +102,8 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
     assert bids_success_str in result
 
     reloaded = Bids().load_dataset(id=path, name=dataset_name)
-    reloaded.add_sink("t1w", datatype=NiftiX, path="anat/T1w")
+    reloaded.add_sink("t1w", datatype=NiftiX, path="anat/T1w")  # add sink to reloaded so it matches
+    reloaded.name = ""  # remove saved name so it matches
 
     assert dataset == reloaded
 
