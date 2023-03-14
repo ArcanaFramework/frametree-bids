@@ -46,7 +46,7 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
             "subject": r"(?P<group>\w+)(?P<member>\d+)"
         },
         metadata={
-            "readme": MOCK_README,
+            "description": MOCK_README,
             "authors": MOCK_AUTHORS,
             "generated_by": [
                 {
@@ -197,7 +197,7 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
         name=name,
         leaves=[("1",)],
         metadata={
-            "readme": MOCK_README,
+            "description": MOCK_README,
             "authors": MOCK_AUTHORS,
             "generated_by": [
                 {
