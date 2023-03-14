@@ -170,10 +170,10 @@ class Bids(LocalStore):
         return base_uri + str(
             self._entry2fs_path(
                 path,
-                subject_id=row.ids[Clinical.subject],
+                subject_id=row.frequency_id("subject"),
                 timepoint_id=(
-                    row.ids[Clinical.timepoint]
-                    if Clinical.timepoint in row.dataset.hierarchy
+                    row.frequency_id("timepoint")
+                    if "timepoint" in row.dataset.hierarchy
                     else None
                 ),
                 ext=datatype.ext,
@@ -200,9 +200,9 @@ class Bids(LocalStore):
             base_uri
             + self._entry2fs_path(
                 f"{namespace}/{self.FIELDS_FNAME}",
-                subject_id=row.ids[Clinical.subject],
+                subject_id=row.frequency_id("subject"),
                 timepoint_id=(
-                    row.ids[Clinical.timepoint]
+                    row.frequency_id("timepoint")
                     if Clinical.timepoint in row.dataset.hierarchy
                     else None
                 ),
@@ -274,8 +274,15 @@ class Bids(LocalStore):
         # Create sub-directories corresponding to rows of the dataset
         for ids_tuple in leaves:
             ids = dict(zip(hierarchy, ids_tuple))
-            subject_id = ids["subject"]
-            timepoint_id = ids.get("timepoint")
+            if "session" in hierarchy:
+                subject_id = ids["session"]
+                timepoint_id = None
+                assert "subject" not in ids
+                assert "timepoint" not in ids
+            else:
+                subject_id = ids["subject"]
+                timepoint_id = ids["timepoint"]
+                assert "session" not in ids
             group_id = ids.get("group")
             if group_id is not None:
                 group_ids.add(group_id)
@@ -300,9 +307,9 @@ class Bids(LocalStore):
             with open(root_dir / "participants.json", "w") as f:
                 json.dump(participants_desc, f)
 
-    ###############
-    # Other methods
-    ###############
+    ####################
+    # Overrides of API #
+    ####################
 
     def save_dataset(
         self, dataset: Dataset, name: str = None, overwrite_metadata: bool = False
@@ -327,7 +334,7 @@ class Bids(LocalStore):
                         subject_row.metadata[k] for k in dataset.metadata.row_keys
                     ]
                     if "group" in col_names:
-                        rw.append(subject_row.ids[Clinical.group])
+                        rw.append(subject_row.frequency_id("group"))
                     f.write("\t".join(rw) + "\n")
 
         dataset_description_fspath = root_dir / "dataset_description.json"
@@ -354,6 +361,40 @@ class Bids(LocalStore):
             else:
                 with open(readme_path, "w") as f:
                     f.write(dataset.metadata.readme)
+
+    def new_dataset(
+        self,
+        id: str,
+        leaves: list[tuple[str, ...]],
+        hierarchy: list[str] = ["session"],
+        space: type = Clinical,
+        name: str = None,
+        **kwargs,
+    ):
+        """Creates a new dataset with new rows to store data in
+
+        Parameters
+        ----------
+        id : str
+            ID of the dataset
+        leaves : list[tuple[str, ...]]
+            the list of tuple IDs (at each level of the tree)
+        name : str, optional
+            name of the dataset, if provided the dataset definition will be saved. To
+            save the dataset with the default name pass an empty string.
+        hierarchy : list[str], optional
+            hierarchy of the dataset tree, by default single level (i.e. one session per subject)
+        space : type, optional
+            the space of the dataset
+
+        Returns
+        -------
+        Dataset
+            the newly created dataset
+        """
+        return super().new_dataset(
+            id=id, leaves=leaves, hierarchy=hierarchy, space=space, name=name, **kwargs
+        )
 
     ################
     # Helper methods
@@ -504,9 +545,9 @@ class Bids(LocalStore):
 
     @classmethod
     def _rel_row_path(cls, row: DataRow):
-        relpath = Path(f"sub-{row.ids[Clinical.subject]}")
-        if Clinical.timepoint in row.dataset.hierarchy:
-            relpath /= f"ses-{row.ids[Clinical.timepoint]}"
+        relpath = Path(f"sub-{row.frequency_id('subject')}")
+        if "timepoint" in row.dataset.hierarchy:
+            relpath /= f"ses-{row.frequency_id('timepoint')}"
         return relpath
 
     def definition_save_path(self, dataset_id, name):
