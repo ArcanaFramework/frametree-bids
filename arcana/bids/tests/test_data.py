@@ -2,6 +2,7 @@ import os
 import stat
 import typing as ty
 import json
+import itertools
 from pathlib import Path
 from warnings import warn
 import requests.exceptions
@@ -13,6 +14,7 @@ import pytest
 import docker
 from arcana.core import __version__
 from fileformats.medimage import NiftiX, NiftiGzX, NiftiGzXBvec
+from arcana.core.data.space import Clinical
 from arcana.bids.data import Bids
 from arcana.bids.tasks import bids_app, BidsInput, BidsOutput
 from fileformats.text import Plain as Text
@@ -30,16 +32,21 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
     dataset_name = "adataset"
 
     shutil.rmtree(path, ignore_errors=True)
-    dataset = Bids().create_empty_dataset(
+    group_ids = ["test", "control"]
+    member_ids = [str(i) for i in range(1, 4)]
+    subject_ids = ["{}{}".format(*t) for t in itertools.product(group_ids, member_ids)]
+    timepoint_ids = [str(i) for i in range(1, 3)]
+    dataset = Bids().new_dataset(
         id=path,
         name=dataset_name,
-        row_ids={
-            "subject": [str(i) for i in range(1, 4)],
-            "timepoint": [str(i) for i in range(1, 3)],
-            "group": ["test", "control"],
+        space=Clinical,
+        hierarchy=["subject", "timepoint"],
+        leaves=itertools.product(subject_ids, timepoint_ids),
+        id_composition={
+            "subject": r"(?P<group>\w+)(?P<member>\d+)"
         },
         metadata={
-            "readme": MOCK_README,
+            "description": MOCK_README,
             "authors": MOCK_AUTHORS,
             "generated_by": [
                 {
@@ -95,7 +102,8 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
     assert bids_success_str in result
 
     reloaded = Bids().load_dataset(id=path, name=dataset_name)
-    reloaded.add_sink("t1w", datatype=NiftiX, path="anat/T1w")
+    reloaded.add_sink("t1w", datatype=NiftiX, path="anat/T1w")  # add sink to reloaded so it matches
+    reloaded.name = ""  # remove saved name so it matches
 
     assert dataset == reloaded
 
@@ -152,17 +160,17 @@ JSON_EDIT_TESTS = {
             "fmap_mag1": SourceNiftiXBlueprint(
                 path="fmap/magnitude1",
                 orig_side_car={},
-                edited_side_car={"IntendedFor": "func/sub-1_ses-1_task-rest_bold.nii"},
+                edited_side_car={"IntendedFor": "func/sub-1_task-rest_bold.nii"},
             ),
             "fmap_mag2": SourceNiftiXBlueprint(
                 path="fmap/magnitude2",
                 orig_side_car={},
-                edited_side_car={"IntendedFor": "func/sub-1_ses-1_task-rest_bold.nii"},
+                edited_side_car={"IntendedFor": "func/sub-1_task-rest_bold.nii"},
             ),
             "fmap_phasediff": SourceNiftiXBlueprint(
                 path="fmap/phasediff",
                 orig_side_car={},
-                edited_side_car={"IntendedFor": "func/sub-1_ses-1_task-rest_bold.nii"},
+                edited_side_car={"IntendedFor": "func/sub-1_task-rest_bold.nii"},
             ),
         },
     ),
@@ -184,15 +192,12 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
     shutil.rmtree(path, ignore_errors=True)
     dataset = Bids(
         json_edits=[(bp.path_re, bp.jq_script)],
-    ).create_empty_dataset(
+    ).new_dataset(
         id=path,
         name=name,
-        row_ids={
-            "subject": ["1"],
-            "timepoint": ["1"],
-        },
+        leaves=[("1",)],
         metadata={
-            "readme": MOCK_README,
+            "description": MOCK_README,
             "authors": MOCK_AUTHORS,
             "generated_by": [
                 {
@@ -232,12 +237,12 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
             json.dump(sf_bp.orig_side_car, f)
 
         # Get single item in dataset
-        dataset[sf_name][("1", "1")] = (nifti_fspath, json_fspath)
+        dataset[sf_name]["1"] = (nifti_fspath, json_fspath)
 
     # Check edited JSON matches reference
     for sf_name, sf_bp in bp.source_niftis.items():
 
-        item = dataset[sf_name][("1", "1")]
+        item = dataset[sf_name]["1"]
         with open(item.json_file) as f:
             saved_dict = json.load(f)
 

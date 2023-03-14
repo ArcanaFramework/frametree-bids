@@ -2,7 +2,9 @@ from functools import reduce
 from operator import mul
 import pytest
 from fileformats.text import Plain as Text
-from arcana.core.data.testing import TestDatasetBlueprint
+from arcana.testing.data.blueprint import (
+    TestDatasetBlueprint, FileSetEntryBlueprint as FileBP
+)
 from arcana.core.data.space import Clinical
 from fileformats.medimage import NiftiGzX
 from arcana.bids.cli import app_entrypoint
@@ -19,33 +21,51 @@ def test_bids_app_entrypoint(
 ):
 
     blueprint = TestDatasetBlueprint(
-        hierarchy=[Clinical.subject, Clinical.session],
+        space=Clinical,
+        hierarchy=["subject", "session"],
         dim_lengths=[1, 1, 1],
-        files=[
-            "anat/T1w.nii.gz",
-            "anat/T1w.json",
-            "anat/T2w.nii.gz",
-            "anat/T2w.json",
-            "dwi/dwi.nii.gz",
-            "dwi/dwi.json",
-            "dwi/dwi.bvec",
-            "dwi/dwi.bval",
+        entries=[
+            FileBP(
+                path="anat/T1w",
+                datatype=NiftiGzX,
+                filenames=["anat/T1w.nii.gz", "anat/T1w.json"],
+            ),
+            FileBP(
+                path="anat/T2w",
+                datatype=NiftiGzX,
+                filenames=["anat/T2w.nii.gz", "anat/T2w.json"],
+            ),
+            FileBP(
+                "dwi/dwi",
+                datatype=NiftiGzX,
+                filenames=[
+                    "dwi/dwi.nii.gz",
+                    "dwi/dwi.json",
+                    "dwi/dwi.bvec",
+                    "dwi/dwi.bval",
+                ],
+            ),
         ],
-        expected_datatypes={
-            "anat/T1w": (NiftiGzX, ["T1w.nii.gz", "T1w.json"]),
-            "anat/T2w": (NiftiGzX, ["T2w.nii.gz", "T2w.json"]),
-            "dwi/dwi": (NiftiGzX, ["dwi.nii.gz", "dwi.json", "dwi.bvec", "dwi.bval"]),
-        },
         derivatives=[
-            ("file1", Clinical.session, Text, ["file1.txt"]),
-            ("file2", Clinical.session, Text, ["file2.txt"]),
+            FileBP(
+                path="file1",
+                row_frequency=Clinical.session,
+                datatype=Text,
+                filenames=["file1.txt"],
+            ),
+            FileBP(
+                path="file2",
+                row_frequency=Clinical.session,
+                datatype=Text,
+                filenames=["file2.txt"],
+            ),
         ],
     )
 
     dataset_path = work_dir / "bids-dataset"
 
-    dataset = Bids.make_test_dataset(
-        dataset_id=dataset_path, blueprint=blueprint, source_data=nifti_sample_dir
+    dataset = blueprint.make_dataset(
+        dataset_id=dataset_path, store=Bids(), source_data=nifti_sample_dir
     )
 
     spec_path = work_dir / "spec.yaml"
@@ -64,7 +84,7 @@ def test_bids_app_entrypoint(
         "--spec-path",
         spec_path,
         "--dataset-hierarchy",
-        ",".join([str(ln) for ln in blueprint.hierarchy]),
+        ",".join(blueprint.hierarchy),
     ]
     inputs_config = {}
     for path, (datatype, _) in blueprint.expected_datatypes.items():
@@ -106,9 +126,7 @@ def test_bids_app_entrypoint(
                 "executable": str(mock_bids_app_executable),
             },
         },
-        packages={
-            "pip": ["arcana-bids"]
-        }
+        packages={"pip": ["arcana-bids"]},
     )
     image_spec.save(spec_path)
 
