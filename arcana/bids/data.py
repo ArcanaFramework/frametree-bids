@@ -372,7 +372,7 @@ class Bids(LocalStore):
             with open(dataset_description_fspath, "w") as f:
                 json.dump(dataset_description, f, indent="    ")
 
-        if dataset.metadata.readme is not None:
+        if dataset.metadata.description is not None:
             readme_path = root_dir / "README"
             if readme_path.exists() and not overwrite_bids_metadata:
                 logger.warning(
@@ -383,7 +383,7 @@ class Bids(LocalStore):
                 )
             else:
                 with open(readme_path, "w") as f:
-                    f.write(dataset.metadata.readme)
+                    f.write(dataset.metadata.description)
         participants_tsv_fspath = dataset.root_dir / "participants.tsv"
         columns = list(dataset.metadata.row_metadata)
         group_ids = [i for i in dataset.row_ids("group") if i is not None]
