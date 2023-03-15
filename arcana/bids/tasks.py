@@ -136,7 +136,7 @@ def bids_app(
     if dataset is None:
         dataset = Path(tempfile.mkdtemp()) / "arcana_bids_dataset"
     if not isinstance(dataset, Dataset):
-        dataset = Bids().new_dataset(
+        dataset = Bids().create_dataset(
             id=dataset,
             name=name + "_dataset",
             leaves=[(DEFAULT_BIDS_ID,)],
