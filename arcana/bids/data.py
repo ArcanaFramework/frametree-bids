@@ -314,7 +314,7 @@ class Bids(LocalStore):
         super().save_dataset(dataset, name=name)
         self._save_metadata(dataset, overwrite_bids_metadata=overwrite_bids_metadata)
 
-    def new_dataset(
+    def create_dataset(
         self,
         id: str,
         leaves: list[tuple[str, ...]],
@@ -344,7 +344,7 @@ class Bids(LocalStore):
         Dataset
             the newly created dataset
         """
-        dataset = super().new_dataset(
+        dataset = super().create_dataset(
             id=id, leaves=leaves, hierarchy=hierarchy, space=space, name=name, **kwargs
         )
         self._save_metadata(dataset, overwrite_bids_metadata=True)
