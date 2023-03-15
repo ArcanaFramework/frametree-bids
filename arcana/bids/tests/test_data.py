@@ -31,7 +31,7 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
     member_ids = [str(i) for i in range(1, 4)]
     subject_ids = ["{}{}".format(*t) for t in itertools.product(group_ids, member_ids)]
     timepoint_ids = [str(i) for i in range(1, 3)]
-    dataset = Bids().new_dataset(
+    dataset = Bids().create_dataset(
         id=path,
         name=dataset_name,
         space=Clinical,
@@ -187,7 +187,7 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
     shutil.rmtree(path, ignore_errors=True)
     dataset = Bids(
         json_edits=[(bp.path_re, bp.jq_script)],
-    ).new_dataset(
+    ).create_dataset(
         id=path,
         name=name,
         leaves=[("1",)],
