@@ -15,8 +15,7 @@ def bids_group():
 @bids_group.command(
     name="app-entrypoint",
     help="""Loads a dataset, or creates one it is not already present, then applies and
-launches a pipeline in a single command. To be used within the command configuration
-of an XNAT Container Service ready Docker image.
+launches a pipeline in a single command. To be used inside BidsApp images.
 
 DATASET_LOCATOR string containing the nickname of the data store, the ID of the
 dataset (e.g. XNAT project ID or file-system directory) and the dataset's name
