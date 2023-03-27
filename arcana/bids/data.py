@@ -90,11 +90,10 @@ class Bids(LocalStore):
             The dataset to construct the tree dimensions for
         """
         root_dir = Path(tree.dataset.id)
-        participants_fspath = root_dir / "participants.tsv"
-        participants = {}
-        if participants_fspath.exists():
-            with open(participants_fspath) as f:
+        if "group" in tree.dataset.hierarchy:
+            with open(root_dir / "participants.tsv") as f:
                 lines = f.read().splitlines()
+            participants = {}
             if lines:
                 participant_keys = lines[0].split("\t")
                 for line in lines[1:]:
@@ -104,18 +103,17 @@ class Bids(LocalStore):
             if not subject_dir.name.startswith("sub-"):
                 continue
             subject_id = subject_dir.name[len("sub-") :]
-            try:
-                additional_ids = {"group": participants[subject_id]["group"]}
-            except KeyError:
-                additional_ids = {}
+            if "group" in tree.dataset.hierarchy:
+                tree_path = participants[subject_id]["group"]
+            else:
+                tree_path = []
+            tree_path.append(subject_id)
             if any(d.name.startswith("ses-") for d in subject_dir.iterdir()):
                 for sess_dir in subject_dir.iterdir():
                     timepoint_id = sess_dir.name[len("ses-") :]
-                    sess_add_ids = copy(additional_ids)
-                    sess_add_ids["session"] = f"sub-{subject_id}_ses-{timepoint_id}"
-                    tree.add_leaf([subject_id, timepoint_id], additional_ids=sess_add_ids)
+                    tree.add_leaf(tree_path + [timepoint_id])
             else:
-                tree.add_leaf([subject_id], additional_ids=additional_ids)
+                tree.add_leaf([subject_id])
 
     def populate_row(self, row: DataRow):
         root_dir = row.dataset.root_dir
@@ -269,31 +267,25 @@ class Bids(LocalStore):
         id: str,
         leaves: list[tuple[str, ...]],
         hierarchy: list[str],
-        id_composition: dict[str, str] = None,
         **kwargs
     ):
         root_dir = Path(id)
         root_dir.mkdir(parents=True)
         # Create sub-directories corresponding to rows of the dataset
         group_ids = set()
-        subject_group_ids = {}
+        subjects_group_id = {}
         for ids_tuple in leaves:
             ids = dict(zip(hierarchy, ids_tuple))
             # Add in composed IDs
-            ids.update(Dataset.decompose_ids(ids, id_composition))
-            if "session" in hierarchy:
-                subject_id = ids["session"]
-                timepoint_id = None
-                assert "subject" not in ids
-                assert "timepoint" not in ids
-            else:
+            try:
                 subject_id = ids["subject"]
-                timepoint_id = ids["timepoint"]
-                assert "session" not in ids
+            except KeyError:
+                subject_id = ids["session"]
+            timepoint_id = ids.get("timepoint")
             group_id = ids.get("group")
             if group_id:
                 group_ids.add(group_id)
-                subject_group_ids[subject_id] = group_id
+                subjects_group_id[subject_id] = group_id
             sess_dir_fspath = root_dir / self._entry2fs_path(
                 entry_path=None, subject_id=subject_id, timepoint_id=timepoint_id
             )
@@ -302,7 +294,7 @@ class Bids(LocalStore):
         if group_ids:
             with open(root_dir / "participants.tsv", "w") as f:
                 f.write("participant_id\tgroup\n")
-                for subject_id, group_id in subject_group_ids.items():
+                for subject_id, group_id in subjects_group_id.items():
                     f.write(f"sub-{subject_id}\t{group_id}\n")
 
     ####################
