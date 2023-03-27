@@ -37,8 +37,9 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
         space=Clinical,
         hierarchy=["subject", "timepoint"],
         leaves=itertools.product(subject_ids, timepoint_ids),
-        id_composition={
-            "subject": r"(?P<group>\w+)(?P<member>\d+)"
+        id_patterns={
+            "group": r"subject::(\w+)\d+",
+            "member": r"subject::\w+(\d+)",
         },
         metadata={
             "description": MOCK_README,
