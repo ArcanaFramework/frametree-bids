@@ -167,7 +167,7 @@ class Bids(LocalStore):
         if dataset_name is None:
             base_uri = ""
         elif not dataset_name:
-            base_uri = f"derivatives/{Dataset.EMPTY_NAME}"
+            base_uri = f"derivatives/{self.EMPTY_DATASET_NAME}"
         else:
             base_uri = f"derivatives/{dataset_name}"
         return base_uri + str(
@@ -188,7 +188,7 @@ class Bids(LocalStore):
         if dataset_name is None:
             base_uri = ""
         elif not dataset_name:
-            base_uri = f"derivatives/{Dataset.EMPTY_NAME}"
+            base_uri = f"derivatives/{self.EMPTY_DATASET_NAME}"
         else:
             base_uri = f"derivatives/{dataset_name}"
         try:
