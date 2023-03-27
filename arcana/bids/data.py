@@ -4,7 +4,6 @@ import json
 import re
 import logging
 from operator import itemgetter
-from copy import copy
 import attrs
 import jq
 from pathlib import Path
