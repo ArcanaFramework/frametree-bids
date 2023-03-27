@@ -69,6 +69,7 @@ class Bids(LocalStore):
     name: str = "bids"
 
     BIDS_VERSION = "1.0.1"
+    DEFAULT_SPACE = Clinical
 
     PROV_SUFFIX = ".provenance"
     FIELDS_FNAME = "__fields__"
