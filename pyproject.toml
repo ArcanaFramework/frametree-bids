@@ -52,6 +52,7 @@ doc = [
 ]
 test = [
     "codecov",
+    "fileformats-testing",
     "medimages4tests >=0.3",
     "pytest>=5.4.3",
     "pytest-cov>=2.12.1",
