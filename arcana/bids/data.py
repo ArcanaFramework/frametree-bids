@@ -74,6 +74,13 @@ class Bids(LocalStore):
     FIELDS_FNAME = "__fields__"
     FIELDS_PROV_FNAME = "__fields_provenance__"
 
+    VALID_HIERARCHIES = (
+        ["subject", "timepoint"],
+        ["session"],
+        ["group", "subject", "timepoint"],
+        ["group", "session"],
+    )
+
     #################################
     # Abstract-method implementations
     #################################
@@ -103,7 +110,7 @@ class Bids(LocalStore):
                 continue
             subject_id = subject_dir.name[len("sub-") :]
             if "group" in tree.dataset.hierarchy:
-                tree_path = participants[subject_id]["group"]
+                tree_path = [participants[subject_id]["group"]]
             else:
                 tree_path = []
             tree_path.append(subject_id)
@@ -268,6 +275,12 @@ class Bids(LocalStore):
         hierarchy: list[str],
         **kwargs
     ):
+        if hierarchy not in self.VALID_HIERARCHIES:
+            raise ArcanaUsageError(
+                f"Invalid hiearchy {hierarchy} provided to create a new data tree "
+                f"needs to be one of the following:\n"
+                + "\n".join(str(h) for h in self.VALID_HIERARCHIES)
+            )
         root_dir = Path(id)
         root_dir.mkdir(parents=True)
         # Create sub-directories corresponding to rows of the dataset
