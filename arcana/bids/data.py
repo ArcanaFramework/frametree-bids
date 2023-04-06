@@ -14,7 +14,7 @@ from fileformats.medimage.nifti import WithBids
 from arcana.core.exceptions import ArcanaUsageError
 from arcana.core.data.tree import DataTree
 from arcana.core.data.set import Dataset
-from arcana.core.data.space import Clinical
+from arcana.stdlib import Clinical
 from arcana.core.data.entry import DataEntry
 from arcana.core.data.row import DataRow
 
@@ -301,7 +301,7 @@ class Bids(LocalStore):
             sess_dir_fspath = root_dir / self._entry2fs_path(
                 entry_path=None, subject_id=subject_id, timepoint_id=timepoint_id
             )
-            sess_dir_fspath.mkdir(parents=True)
+            sess_dir_fspath.mkdir(parents=True, exist_ok=True)
         # Add participants.tsv to define the groups if present
         if group_ids:
             with open(root_dir / "participants.tsv", "w") as f:

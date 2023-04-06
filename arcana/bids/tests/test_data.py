@@ -12,7 +12,7 @@ import pytest
 import docker
 from fileformats.medimage import NiftiX
 from arcana.core import __version__
-from arcana.core.data.space import Clinical
+from arcana.stdlib import Clinical
 from arcana.bids.data import Bids
 
 
@@ -27,18 +27,20 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
     dataset_name = "adataset"
 
     shutil.rmtree(path, ignore_errors=True)
-    group_ids = ["test", "control"]
-    member_ids = [str(i) for i in range(1, 4)]
-    subject_ids = ["{}{}".format(*t) for t in itertools.product(group_ids, member_ids)]
-    timepoint_ids = [str(i) for i in range(1, 3)]
     dataset = Bids().create_dataset(
         id=path,
         name=dataset_name,
         space=Clinical,
-        hierarchy=["subject", "timepoint"],
-        leaves=itertools.product(subject_ids, timepoint_ids),
+        hierarchy=["group", "subject", "timepoint"],
+        leaves=[
+            (group, f"{group}{member}", timepoint)
+            for group, member, timepoint in itertools.product(
+                ["test", "control"],
+                [str(i) for i in range(1, 4)],
+                [str(i) for i in range(1, 3)],
+            )
+        ],
         id_patterns={
-            "group": r"subject::(\w+)\d+",
             "member": r"subject::\w+(\d+)",
         },
         metadata={
@@ -51,7 +53,7 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
                     "description": "Dataset was created programmatically from scratch",
                     "code_url": "http://arcana.readthedocs.io",
                 }
-            ]
+            ],
         },
     )
 
@@ -98,7 +100,9 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
     assert bids_success_str in result
 
     reloaded = Bids().load_dataset(id=path, name=dataset_name)
-    reloaded.add_sink("t1w", datatype=NiftiX, path="anat/T1w")  # add sink to reloaded so it matches
+    reloaded.add_sink(
+        "t1w", datatype=NiftiX, path="anat/T1w"
+    )  # add sink to reloaded so it matches
     reloaded.name = ""  # remove saved name so it matches
 
     assert dataset == reloaded
@@ -186,9 +190,7 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
     name = "bids-dataset"
 
     shutil.rmtree(path, ignore_errors=True)
-    dataset = Bids(
-        json_edits=[(bp.path_re, bp.jq_script)],
-    ).create_dataset(
+    dataset = Bids(json_edits=[(bp.path_re, bp.jq_script)],).create_dataset(
         id=path,
         name=name,
         leaves=[("1",)],
@@ -202,9 +204,8 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
                     "description": "Dataset was created programmatically from scratch",
                     "code_url": "http://arcana.readthedocs.io",
                 }
-            ]
+            ],
         },
-        
     )
 
     for sf_name, sf_bp in bp.source_niftis.items():

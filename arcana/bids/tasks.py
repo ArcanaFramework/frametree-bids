@@ -19,7 +19,7 @@ from pydra.engine.specs import (
 from arcana.core import __version__
 from arcana.core.data.set import Dataset
 from fileformats.core import FileSet
-from arcana.core.data.space import Clinical
+from arcana.stdlib import Clinical
 from arcana.bids.data import JsonEdit
 from arcana.core.exceptions import ArcanaUsageError
 from arcana.core.utils.serialize import (
