@@ -9,10 +9,10 @@ Arcana Extension - bids
    :alt: Python versions
 .. image:: https://img.shields.io/pypi/v/arcana-bids.svg
    :target: https://pypi.python.org/pypi/arcana-bids/
-   :alt: Latest Version  
-.. image:: https://github.com/ArcanaFramework/arcana/actions/workflows/docs.yml/badge.svg
-   :target: http://arcana.readthedocs.io/en/latest/?badge=latest
-   :alt: Docs
+   :alt: Latest Version
+.. image:: https://readthedocs.org/projects/arcana/badge/?version=latest
+  :target: https://arcanaframework.github.io/arcana
+  :alt: Documentation Status
 
 
 An extension of the Arcana framework to work with Brain Imaging Data Structure (BIDS)

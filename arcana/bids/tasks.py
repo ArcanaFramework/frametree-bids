@@ -19,7 +19,7 @@ from pydra.engine.specs import (
 from arcana.core import __version__
 from arcana.core.data.set import Dataset
 from fileformats.core import FileSet
-from arcana.core.data.space import Clinical
+from arcana.stdlib import Clinical
 from arcana.bids.data import JsonEdit
 from arcana.core.exceptions import ArcanaUsageError
 from arcana.core.utils.serialize import (
@@ -82,8 +82,7 @@ def bids_app(
     outputs : list[ty.Union[AppField, dict[str, str]]]
         The outputs to be extracted from the derivatives directory. Should be a list of tuples
         consisting of the the path the file/directory is saved by the app within a BIDS subject/session,
-        e.g. freesurfer/recon-all, and the DataFormat class it is stored in, e.g.
-        arcana.dirtree.data.Directory.
+        e.g. freesurfer/recon-all, and the DataFormat class it is stored in, 
     executable : str, optional
         Name of the executable within the image to run (i.e. the entrypoint of the image).
         Required when extending the base image and launching Arcana within it. Defaults to
