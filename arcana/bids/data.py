@@ -313,11 +313,9 @@ class Bids(LocalStore):
     # Overrides of API #
     ####################
 
-    def save_dataset(
-        self, dataset: Dataset, name: str = None, overwrite_bids_metadata: bool = False
-    ):
+    def save_dataset(self, dataset: Dataset, name: str = None):
         super().save_dataset(dataset, name=name)
-        self._save_metadata(dataset, overwrite_bids_metadata=overwrite_bids_metadata)
+        self._save_metadata(dataset)
 
     def create_dataset(
         self,
@@ -352,81 +350,57 @@ class Bids(LocalStore):
         dataset = super().create_dataset(
             id=id, leaves=leaves, hierarchy=hierarchy, space=space, name=name, **kwargs
         )
-        self._save_metadata(dataset, overwrite_bids_metadata=True)
+        self._save_metadata(dataset)
         return dataset
 
     ################
     # Helper methods
     ################
 
-    def _save_metadata(self, dataset: Dataset, overwrite_bids_metadata: bool = False):
+    def _save_metadata(self, dataset: Dataset):
         root_dir = Path(dataset.id)
         dataset_description_fspath = root_dir / "dataset_description.json"
-        if dataset_description_fspath.exists() and not overwrite_bids_metadata:
-            logger.warning(
-                "Not attempting to overwrite existing BIDS dataset description at "
-                "'%s, use 'overwrite_bids_metadata' to "
-                "force.",
-                str(dataset_description_fspath),
-            )
-        else:
-            dataset_description = map_to_bids_names(
-                attrs.asdict(dataset.metadata, recurse=True)
-            )
-            dataset_description["BIDSVersion"] = self.BIDS_VERSION
-            with open(dataset_description_fspath, "w") as f:
-                json.dump(dataset_description, f, indent="    ")
+        dataset_description = map_to_bids_names(
+            attrs.asdict(dataset.metadata, recurse=True)
+        )
+        dataset_description["BIDSVersion"] = self.BIDS_VERSION
+        with open(dataset_description_fspath, "w") as f:
+            json.dump(dataset_description, f, indent="    ")
 
         if dataset.metadata.description is not None:
             readme_path = root_dir / "README"
-            if readme_path.exists() and not overwrite_bids_metadata:
-                logger.warning(
-                    "Not attempting to overwrite existing BIDS dataset description at "
-                    "%s, use 'overwrite_bids_metadata' to "
-                    "force.",
-                    str(readme_path),
-                )
-            else:
-                with open(readme_path, "w") as f:
-                    f.write(dataset.metadata.description)
-        participants_tsv_fspath = dataset.root_dir / "participants.tsv"
+            with open(readme_path, "w") as f:
+                f.write(dataset.metadata.description)
         columns = list(dataset.metadata.row_metadata)
         group_ids = [i for i in dataset.row_ids("group") if i is not None]
         if group_ids or columns:
-            if participants_tsv_fspath.exists() and not overwrite_bids_metadata:
-                logger.warning(
-                    "Not attempting to overwrite existing BIDS participants TSV at "
-                    "%s, use 'overwrite_bids_metadata' to "
-                    "force.",
-                    str(participants_tsv_fspath),
-                )
-            else:
-                with open(dataset.root_dir / "participants.tsv", "w") as f:
-                    f.write("participant_id")
-                    if group_ids:
-                        f.write("\tgroup")
-                    if columns:
-                        f.write("\t" + "\t".join(columns))
-                    f.write("\n")
-                    for row in dataset.rows("subject"):
-                        f.write(
-                            f"sub-{row.id}"
-                        )
-                        if group_ids:
-                            f.write("\t" + row.frequency_id('group'))
-                        if columns:
-                            f.write("\t" + "\t".join(row.metadata[k] for k in columns))
-                        f.write("\n")
-                participants_desc = {}
+            subject_rows = dataset.rows("subject")
+            with open(dataset.root_dir / "participants.tsv", "w") as f:
+                f.write("participant_id")
                 if group_ids:
-                    participants_desc["group"] = {
-                        "Description": "the group the participant belonged to",
-                        "Levels": {g: f"{g} group" for g in dataset.row_ids("group")},
-                    }
-                for name, desc in dataset.metadata.row_metadata.items():
-                    participants_desc[name] = {"Description": desc}
-                with open(dataset.root_dir / "participants.json", "w") as f:
-                    json.dump(participants_desc, f)
+                    f.write("\tgroup")
+                if columns:
+                    f.write("\t" + "\t".join(columns))
+                f.write("\n")
+                for row in subject_rows:
+                    f.write(
+                        f"sub-{row.id}"
+                    )
+                    if group_ids:
+                        f.write("\t" + row.frequency_id('group'))
+                    if columns:
+                        f.write("\t" + "\t".join(row.metadata[k] for k in columns))
+                    f.write("\n")
+            participants_desc = {}
+            if group_ids:
+                participants_desc["group"] = {
+                    "Description": "the group the participant belonged to",
+                    "Levels": {g: f"{g} group" for g in dataset.row_ids("group")},
+                }
+            for name, desc in dataset.metadata.row_metadata.items():
+                participants_desc[name] = {"Description": desc}
+            with open(dataset.root_dir / "participants.json", "w") as f:
+                json.dump(participants_desc, f)
 
     def _fileset_fspath(self, entry: DataEntry) -> Path:
         return Path(entry.row.dataset.id) / entry.uri
