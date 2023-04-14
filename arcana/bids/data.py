@@ -10,7 +10,7 @@ from pathlib import Path
 from arcana.core.data.store import LocalStore
 from fileformats.core import FileSet, Field
 from fileformats.generic import Directory
-from fileformats.medimage.nifti import WithBids
+from fileformats.medimage.nifti import WithBids, NiftiGzX
 from arcana.core.exceptions import ArcanaUsageError
 from arcana.core.data.tree import DataTree
 from arcana.core.data.set import Dataset
@@ -80,6 +80,8 @@ class Bids(LocalStore):
         ["group", "subject", "timepoint"],
         ["group", "session"],
     )
+
+    DEFAULT_DATATYPE = NiftiGzX
 
     #################################
     # Abstract-method implementations
