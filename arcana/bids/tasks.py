@@ -45,7 +45,7 @@ class BidsOutput:
 
     name: str
     datatype: FileSet = attrs.field(converter=ClassResolver(FileSet))
-    path: str = None
+    path: ty.Optional[str] = None
 
 
 logger = logging.getLogger("arcana")
