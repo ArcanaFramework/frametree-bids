@@ -56,13 +56,13 @@ def bids_app(
     inputs: list[ty.Union[BidsInput, dict[str, str]]],
     outputs: list[ty.Union[BidsOutput, dict[str, str]]],
     executable: str = "",  # Use entrypoint of container,
-    container_image: str = None,
+    container_image: ty.Optional[str] = None,
     parameters: ty.Dict[str, type] = None,
     row_frequency: Clinical or str = Clinical.session,
     container_type: str = "docker",
     dataset: ty.Optional[ty.Union[str, Path, Dataset]] = None,
-    app_output_dir: Path = None,
-    app_work_dir: Path = None,
+    app_output_dir: ty.Optional[Path] = None,
+    app_work_dir: ty.Optional[Path] = None,
     json_edits: ty.List[ty.Tuple[str, str]] = None,
 ) -> Workflow:
     """Creates a Pydra workflow which takes file inputs, maps them to

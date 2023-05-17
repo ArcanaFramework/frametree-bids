@@ -315,7 +315,7 @@ class Bids(LocalStore):
     # Overrides of API #
     ####################
 
-    def save_dataset(self, dataset: Dataset, name: str = None):
+    def save_dataset(self, dataset: Dataset, name: ty.Optional[str] = None):
         super().save_dataset(dataset, name=name)
         self._save_metadata(dataset)
 
@@ -325,7 +325,7 @@ class Bids(LocalStore):
         leaves: list[tuple[str, ...]],
         hierarchy: list[str] = ["session"],
         space: type = Clinical,
-        name: str = None,
+        name: ty.Optional[str] = None,
         **kwargs,
     ):
         """Creates a new dataset with new rows to store data in
@@ -494,7 +494,7 @@ class Bids(LocalStore):
 
     @classmethod
     def _entry2fs_path(
-        cls, entry_path: str, subject_id: str, timepoint_id: str = None, ext: str = ""
+        cls, entry_path: str, subject_id: str, timepoint_id: ty.Optional[str] = None, ext: str = ""
     ) -> Path:
         """Converts a BIDS filename into an Arcana "entry-path".
         Entities not corresponding to subject and session IDs
