@@ -249,7 +249,7 @@ class Bids(LocalStore):
         Inserts or updates a field in the store
         """
         fspath, key = self._fields_fspath_and_key(entry)
-        self.update_json(fspath, key, field.raw_type(field))
+        self.update_json(fspath, key, field.primitive(field))
 
     def get_fileset_provenance(self, entry: DataEntry) -> dict[str, ty.Any]:
         with open(self._fileset_prov_fspath(entry)) as f:
