@@ -10,9 +10,12 @@ from click.testing import CliRunner
 import docker
 from fileformats.medimage import NiftiGzX
 from arcana.core.deploy.image.components import BaseImage
-from pydra import set_input_validator
-
-# set_input_validator(True)
+try:
+    from pydra import set_input_validator
+except ImportError:
+    pass
+else:
+    set_input_validator(True)
 
 log_level = logging.WARNING
 
