@@ -14,7 +14,7 @@ from fileformats.medimage.nifti import WithBids, NiftiGzX
 from arcana.core.exceptions import ArcanaUsageError
 from arcana.core.data.tree import DataTree
 from arcana.core.data.set import Dataset
-from arcana.stdlib import Clinical
+from arcana.common import Clinical
 from arcana.core.data.entry import DataEntry
 from arcana.core.data.row import DataRow
 
