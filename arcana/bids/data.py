@@ -230,7 +230,7 @@ class Bids(LocalStore):
         # Create target directory if it doesn't exist already
         copied_fileset = fileset.copy(
             dest_dir=fspath.parent,
-            stem=fspath.name[: -len(fileset.ext)],
+            new_stem=fspath.name[: -len(fileset.ext)],
             make_dirs=True,
             overwrite=entry.is_derivative,
         )

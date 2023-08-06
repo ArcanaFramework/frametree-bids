@@ -19,6 +19,7 @@ from pydra.engine.specs import (
 from arcana.core import __version__
 from arcana.core.data.set import Dataset
 from fileformats.core import FileSet
+from fileformats.generic import Directory
 from arcana.common import Clinical
 from arcana.bids.data import JsonEdit
 from arcana.core.exceptions import ArcanaUsageError
@@ -58,7 +59,7 @@ def bids_app(
     executable: str = "",  # Use entrypoint of container,
     container_image: ty.Optional[str] = None,
     parameters: ty.Dict[str, type] = None,
-    row_frequency: Clinical or str = Clinical.session,
+    row_frequency: ty.Union[Clinical, str] = Clinical.session,
     container_type: str = "docker",
     dataset: ty.Optional[ty.Union[str, Path, Dataset]] = None,
     app_output_dir: ty.Optional[Path] = None,
@@ -125,6 +126,12 @@ def bids_app(
     else:
         app_output_dir = Path(app_output_dir)
         app_output_dir.mkdir(parents=True, exist_ok=True)
+    if app_work_dir is None:
+        app_work_dir = Path(tempfile.mkdtemp())
+    else:
+        app_work_dir = Path(app_work_dir)
+        app_work_dir.mkdir(parents=True, exist_ok=True)
+
     if json_edits is None:
         json_edits = []
 
@@ -173,8 +180,8 @@ def bids_app(
             in_fields=(
                 [
                     ("row_frequency", Clinical),
-                    ("inputs", ty.List[ty.Tuple[str, type, str]]),
-                    ("dataset", Dataset or str),
+                    ("inputs", ty.List[BidsInput]),
+                    ("dataset", ty.Union[Dataset, str]),
                     ("id", str),
                     ("json_edits", str),
                     ("fixed_json_edits", ty.List[ty.Tuple[str, str]]),
@@ -224,12 +231,11 @@ def bids_app(
         base_spec_cls = ShellSpec
         kwargs["executable"] = executable
         app_output_path = str(app_output_dir)
-        app_dataset_path = Path(dataset.id)
     else:
 
         # Set input and output directories to "internal" paths within the
         # container
-        app_dataset_path = CONTAINER_DATASET_PATH
+        # app_dataset_path = CONTAINER_DATASET_PATH
         app_output_path = CONTAINER_DERIV_PATH
         kwargs["image"] = container_image
 
@@ -257,9 +263,9 @@ def bids_app(
         output_spec=SpecInfo(
             name="Output", fields=BIDS_APP_OUTPUTS, bases=(ShellOutSpec,)
         ),
-        dataset_path=str(app_dataset_path),
+        dataset_path=dataset.id,
         output_path=str(app_output_path),
-        work_dir=app_work_dir,
+        work_dir=str(app_work_dir),
         analysis_level=analysis_level,
         flags=wf.lzin.flags,
         setup_completed=wf.to_bids.lzout.completed,
@@ -268,8 +274,8 @@ def bids_app(
 
     if container_image is not None:
         main_task.bindings = {
-            dataset.id: (CONTAINER_DATASET_PATH, "ro"),
-            app_output_dir: (CONTAINER_DERIV_PATH, "rw"),
+            # str(dataset.id): (CONTAINER_DATASET_PATH, "ro"),
+            str(app_output_dir): (CONTAINER_DERIV_PATH, "rw"),
         }
 
     wf.add(main_task)
@@ -282,7 +288,7 @@ def bids_app(
                 ("row_frequency", Clinical),
                 ("app_name", str),
                 ("output_dir", Path),
-                ("outputs", ty.List[ty.Tuple[str, type, str]]),
+                ("outputs", ty.List[BidsOutput]),
                 ("id", str),
                 ("app_completed", bool),
             ],
@@ -395,7 +401,7 @@ def extract_bids(
 BIDS_APP_INPUTS = [
     (
         "dataset_path",
-        str,
+        Directory,  # Needs to be path for internal container paths
         {
             "help_string": "Path to BIDS dataset in the container",
             "position": 1,
@@ -405,7 +411,7 @@ BIDS_APP_INPUTS = [
     ),
     (
         "output_path",
-        str,
+        Path,
         {
             "help_string": "Directory where outputs will be written in the container",
             "position": 2,
@@ -423,7 +429,7 @@ BIDS_APP_INPUTS = [
     ),
     (
         "participant_label",
-        ty.List[str],
+        str,
         {
             "help_string": "The IDs to include in the analysis",
             "argstr": "--participant-label ",
@@ -441,7 +447,7 @@ BIDS_APP_INPUTS = [
     ),
     (
         "work_dir",
-        str,
+        Path,
         {
             "help_string": "Directory where the nipype temporary working directories will be stored",
             "argstr": "--work-dir '{work_dir}'",
