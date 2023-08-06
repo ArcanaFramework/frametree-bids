@@ -5,7 +5,7 @@ from fileformats.text import Plain as Text
 from arcana.testing.data.blueprint import (
     TestDatasetBlueprint, FileSetEntryBlueprint as FileBP
 )
-from arcana.stdlib import Clinical
+from arcana.common import Clinical
 from fileformats.medimage import NiftiGzX
 from arcana.bids.cli import app_entrypoint
 from arcana.core.utils.serialize import ClassResolver

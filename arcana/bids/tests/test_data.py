@@ -12,7 +12,7 @@ import pytest
 import docker
 from fileformats.medimage import NiftiX
 from arcana.core import __version__
-from arcana.stdlib import Clinical
+from arcana.common import Clinical
 from arcana.bids.data import Bids
 
 

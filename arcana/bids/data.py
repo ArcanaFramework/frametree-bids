@@ -14,7 +14,7 @@ from fileformats.medimage.nifti import WithBids, NiftiGzX
 from arcana.core.exceptions import ArcanaUsageError
 from arcana.core.data.tree import DataTree
 from arcana.core.data.set import Dataset
-from arcana.stdlib import Clinical
+from arcana.common import Clinical
 from arcana.core.data.entry import DataEntry
 from arcana.core.data.row import DataRow
 
@@ -228,9 +228,9 @@ class Bids(LocalStore):
         """
         fspath = self._fileset_fspath(entry)
         # Create target directory if it doesn't exist already
-        copied_fileset = fileset.copy_to(
+        copied_fileset = fileset.copy(
             dest_dir=fspath.parent,
-            stem=fspath.name[: -len(fileset.ext)],
+            new_stem=fspath.name[: -len(fileset.ext)],
             make_dirs=True,
             overwrite=entry.is_derivative,
         )
@@ -249,7 +249,7 @@ class Bids(LocalStore):
         Inserts or updates a field in the store
         """
         fspath, key = self._fields_fspath_and_key(entry)
-        self.update_json(fspath, key, field.raw_type(field))
+        self.update_json(fspath, key, field.primitive(field))
 
     def get_fileset_provenance(self, entry: DataEntry) -> dict[str, ty.Any]:
         with open(self._fileset_prov_fspath(entry)) as f:
@@ -315,7 +315,7 @@ class Bids(LocalStore):
     # Overrides of API #
     ####################
 
-    def save_dataset(self, dataset: Dataset, name: str = None):
+    def save_dataset(self, dataset: Dataset, name: ty.Optional[str] = None):
         super().save_dataset(dataset, name=name)
         self._save_metadata(dataset)
 
@@ -325,7 +325,7 @@ class Bids(LocalStore):
         leaves: list[tuple[str, ...]],
         hierarchy: list[str] = ["session"],
         space: type = Clinical,
-        name: str = None,
+        name: ty.Optional[str] = None,
         **kwargs,
     ):
         """Creates a new dataset with new rows to store data in
@@ -494,7 +494,7 @@ class Bids(LocalStore):
 
     @classmethod
     def _entry2fs_path(
-        cls, entry_path: str, subject_id: str, timepoint_id: str = None, ext: str = ""
+        cls, entry_path: str, subject_id: str, timepoint_id: ty.Optional[str] = None, ext: str = ""
     ) -> Path:
         """Converts a BIDS filename into an Arcana "entry-path".
         Entities not corresponding to subject and session IDs
