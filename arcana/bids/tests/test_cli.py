@@ -11,7 +11,7 @@ from arcana.bids.cli import app_entrypoint
 from arcana.core.utils.serialize import ClassResolver
 from arcana.core.utils.misc import path2varname
 from arcana.core.utils.misc import show_cli_trace
-from arcana.core.deploy import App, Version
+from arcana.core.deploy import App
 from arcana.bids.data import Bids
 
 
