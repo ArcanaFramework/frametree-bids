@@ -11,7 +11,7 @@ from arcana.bids.cli import app_entrypoint
 from arcana.core.utils.serialize import ClassResolver
 from arcana.core.utils.misc import path2varname
 from arcana.core.utils.misc import show_cli_trace
-from arcana.core.deploy import App
+from arcana.core.deploy import App, Version
 from arcana.bids.data import Bids
 
 
@@ -95,7 +95,7 @@ def test_bids_app_entrypoint(
                 "path": path,
             },
             "datatype": format_str,
-            "help_string": "dummy",
+            "help": "dummy",
         }
 
     outputs_config = {}
@@ -107,16 +107,17 @@ def test_bids_app_entrypoint(
                 "path": path,
             },
             "datatype": format_str,
-            "help_string": "dummy",
+            "help": "dummy",
         }
 
     image_spec = App(
+        title="a test image",
         name="test_bids_app_entrypoint",
-        version="1.0",
-        build_iteration="1",
-        description="a test image",
+        version={"package": "1.0", "build": "1"},
         authors=[{"name": "Some One", "email": "some.one@an.email.org"}],
-        info_url="http://concatenate.readthefakedocs.io",
+        docs={
+            "info_url": "http://concatenate.readthefakedocs.io",
+        },
         command={
             "task": "arcana.bids.tasks:bids_app",
             "row_frequency": "medimage:Clinical[session]",

@@ -199,21 +199,21 @@ def bids_command_spec(mock_bids_app_executable):
                 "path": "anat/T1w",
             },
             "datatype": "medimage:NiftiGzX",
-            "help_string": "T1-weighted image",
+            "help": "T1-weighted image",
         },
         "T2w": {
             "configuration": {
                 "path": "anat/T2w",
             },
             "datatype": "medimage:NiftiGzX",
-            "help_string": "T2-weighted image",
+            "help": "T2-weighted image",
         },
         "DWI": {
             "configuration": {
                 "path": "dwi/dwi",
             },
             "datatype": "medimage:NiftiGzXBvec",
-            "help_string": "DWI-weighted image",
+            "help": "DWI-weighted image",
         },
     }
 
@@ -223,14 +223,14 @@ def bids_command_spec(mock_bids_app_executable):
                 "path": "file1",
             },
             "datatype": "common:Text",
-            "help_string": "an output file",
+            "help": "an output file",
         },
         "file2": {
             "configuration": {
                 "path": "file2",
             },
             "datatype": "common:Text",
-            "help_string": "another output file",
+            "help": "another output file",
         },
     }
 
