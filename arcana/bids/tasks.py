@@ -218,7 +218,7 @@ def bids_app(
             (
                 param,
                 type(param),
-                {"help": f"Optional parameter {param}", "argstr": argstr},
+                {"help_string": f"Optional parameter {param}", "argstr": argstr},
             )
         )
 
@@ -403,7 +403,7 @@ BIDS_APP_INPUTS = [
         "dataset_path",
         Directory,  # Needs to be path for internal container paths
         {
-            "help": "Path to BIDS dataset in the container",
+            "help_string": "Path to BIDS dataset in the container",
             "position": 1,
             "mandatory": True,
             "argstr": "'{dataset_path}'",
@@ -413,7 +413,7 @@ BIDS_APP_INPUTS = [
         "output_path",
         Path,
         {
-            "help": "Directory where outputs will be written in the container",
+            "help_string": "Directory where outputs will be written in the container",
             "position": 2,
             "argstr": "'{output_path}'",
         },
@@ -422,7 +422,7 @@ BIDS_APP_INPUTS = [
         "analysis_level",
         str,
         {
-            "help": "The analysis level the app will be run at",
+            "help_string": "The analysis level the app will be run at",
             "position": 3,
             "argstr": "",
         },
@@ -431,7 +431,7 @@ BIDS_APP_INPUTS = [
         "participant_label",
         str,
         {
-            "help": "The IDs to include in the analysis",
+            "help_string": "The IDs to include in the analysis",
             "argstr": "--participant-label ",
             "position": 4,
         },
@@ -440,7 +440,7 @@ BIDS_APP_INPUTS = [
         "flags",
         str,
         {
-            "help": "Additional flags to pass to the app",
+            "help_string": "Additional flags to pass to the app",
             "argstr": "",
             "position": -1,
         },
@@ -449,7 +449,7 @@ BIDS_APP_INPUTS = [
         "work_dir",
         Path,
         {
-            "help": "Directory where the nipype temporary working directories will be stored",
+            "help_string": "Directory where the nipype temporary working directories will be stored",
             "argstr": "--work-dir '{work_dir}'",
         },
     ),
@@ -457,7 +457,7 @@ BIDS_APP_INPUTS = [
         "setup_completed",
         bool,
         {
-            "help": "Dummy field to ensure that the BIDS dataset construction completes first"
+            "help_string": "Dummy field to ensure that the BIDS dataset construction completes first"
         },
     ),
 ]
@@ -467,7 +467,7 @@ BIDS_APP_OUTPUTS = [
         "completed",
         bool,
         {
-            "help": "a simple flag to indicate app has completed",
+            "help_string": "a simple flag to indicate app has completed",
             "callable": lambda: True,
         },
     )
