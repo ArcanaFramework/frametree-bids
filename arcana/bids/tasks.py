@@ -14,7 +14,7 @@ from pydra.engine.specs import (
     SpecInfo,
     ShellOutSpec,
 )
-from pydra.engine.environments import Docker
+from pydra.engine.environments import Docker, Native
 from arcana.core import __version__
 from arcana.core.data.set import Dataset
 from fileformats.core import FileSet
@@ -226,7 +226,7 @@ def bids_app(
     # container or extension of it)
     if container_image is None:
         app_output_path = str(app_output_dir)
-        environment = None
+        environment = Native()
     else:
         environment = Docker(container_image)
         app_output_path = CONTAINER_DERIV_PATH
