@@ -13,4 +13,4 @@ Name of the pipeline
 
 ### Question
 
-You question about the pipelines functionality/references/how-to-use it
+You question about the framewok
