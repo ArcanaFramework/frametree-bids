@@ -3,20 +3,20 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "arcana-bids"
-description = "An Arcana extension for interacting with Brain Imaging Structure (BIDS) datasets and associated \"Apps\""
-readme = "README.rst"
+name = "frametree-bids"
+description = "An FrameTree extension for interacting with Brain Imaging Structure (BIDS) datasets and associated \"Apps\""
+readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-    "arcana",
+    "frametree",
     "fileformats[extended] >= 0.3.3",
     "fileformats-medimage[extended] >= 0.2.1",
     "jq >=1.4.0",
 ]
-license = {file = "LICENSE"}
-authors = [{name = "Thomas G. Close", email = "tom.g.close@gmail.com"}]
-maintainers = [{name = "Thomas G. Close", email = "tom.g.close@gmail.com"}]
-keywords = ["arcana"]
+license = { file = "LICENSE" }
+authors = [{ name = "Thomas G. Close", email = "tom.g.close@gmail.com" }]
+maintainers = [{ name = "Thomas G. Close", email = "tom.g.close@gmail.com" }]
+keywords = ["frametree"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
@@ -33,13 +33,7 @@ classifiers = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-dev = [
-    "black",
-    "codespell",
-    "flake8",
-    "flake8-pyproject",
-    "pre-commit",
-]
+dev = ["black", "codespell", "flake8", "flake8-pyproject", "pre-commit"]
 doc = [
     "docutils>=0.10",
     "furo>=2022.2.14.1",
@@ -52,6 +46,7 @@ doc = [
 ]
 test = [
     "fileformats-testing",
+    "pydra2app",
     "medimages4tests >=0.3",
     "pytest>=5.4.3",
     "pytest-cov>=2.12.1",
@@ -59,22 +54,18 @@ test = [
 ]
 
 [project.urls]
-documentation = "https://arcana.readthedocs.io"
-repository = "https://github.com/ArcanaFramework/arcana-bids.git"
+documentation = "https://frametree.readthedocs.io"
+repository = "https://github.com/ArcanaFramework/frametree-bids.git"
 
 [tool.hatch.version]
 source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
-version-file = "arcana/bids/_version.py"
+version-file = "frametree/bids/_version.py"
 
 [tool.hatch.build]
-packages = [
-    "arcana",
-]
-exclude = [
-    "/tests",
-]
+packages = ["frametree"]
+exclude = ["/tests"]
 
 [tool.black]
 line-length = 88

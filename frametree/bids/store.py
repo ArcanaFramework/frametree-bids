@@ -7,18 +7,18 @@ from operator import itemgetter
 import attrs
 import jq
 from pathlib import Path
-from arcana.core.data.store import LocalStore
+from frametree.core.store import LocalStore
 from fileformats.core import FileSet, Field
 from fileformats.generic import Directory
 from fileformats.medimage.nifti import WithBids, NiftiGzX
-from arcana.core.exceptions import ArcanaUsageError
-from arcana.core.data.tree import DataTree
-from arcana.core.data.set import Dataset
-from arcana.common import Clinical
-from arcana.core.data.entry import DataEntry
-from arcana.core.data.row import DataRow
+from frametree.core.exceptions import FrameTreeUsageError
+from frametree.core.tree import DataTree
+from frametree.core.set import Dataset
+from frametree.common import Clinical
+from frametree.core.entry import DataEntry
+from frametree.core.row import DataRow
 
-logger = logging.getLogger("arcana")
+logger = logging.getLogger("frametree")
 
 
 @attrs.define
@@ -201,7 +201,7 @@ class Bids(LocalStore):
         try:
             namespace, field_name = path.split("/")
         except ValueError:
-            raise ArcanaUsageError(
+            raise FrameTreeUsageError(
                 f"Field path '{path}', should contain two sections delimted by '/', "
                 "the first is the pipeline name that generated the field, "
                 "and the second the field name"
@@ -271,14 +271,10 @@ class Bids(LocalStore):
         self.update_json(fspath, key, provenance)
 
     def create_data_tree(
-        self,
-        id: str,
-        leaves: list[tuple[str, ...]],
-        hierarchy: list[str],
-        **kwargs
+        self, id: str, leaves: list[tuple[str, ...]], hierarchy: list[str], **kwargs
     ):
         if hierarchy not in self.VALID_HIERARCHIES:
-            raise ArcanaUsageError(
+            raise FrameTreeUsageError(
                 f"Invalid hiearchy {hierarchy} provided to create a new data tree "
                 f"needs to be one of the following:\n"
                 + "\n".join(str(h) for h in self.VALID_HIERARCHIES)
@@ -385,11 +381,9 @@ class Bids(LocalStore):
                     f.write("\t" + "\t".join(columns))
                 f.write("\n")
                 for row in subject_rows:
-                    f.write(
-                        f"sub-{row.id}"
-                    )
+                    f.write(f"sub-{row.id}")
                     if group_ids:
-                        f.write("\t" + row.frequency_id('group'))
+                        f.write("\t" + row.frequency_id("group"))
                     if columns:
                         f.write("\t" + "\t".join(row.metadata[k] for k in columns))
                     f.write("\n")
@@ -473,7 +467,7 @@ class Bids(LocalStore):
 
     @classmethod
     def _fs2entry_path(cls, relpath: Path) -> str:
-        """Converts a BIDS filename into an Arcana "entry-path".
+        """Converts a BIDS filename into an FrameTree "entry-path".
         Entities not corresponding to subject and session IDs
 
         Parameters
@@ -494,9 +488,13 @@ class Bids(LocalStore):
 
     @classmethod
     def _entry2fs_path(
-        cls, entry_path: str, subject_id: str, timepoint_id: ty.Optional[str] = None, ext: str = ""
+        cls,
+        entry_path: str,
+        subject_id: str,
+        timepoint_id: ty.Optional[str] = None,
+        ext: str = "",
     ) -> Path:
-        """Converts a BIDS filename into an Arcana "entry-path".
+        """Converts a BIDS filename into an FrameTree "entry-path".
         Entities not corresponding to subject and session IDs
 
         Parameters
@@ -518,7 +516,7 @@ class Bids(LocalStore):
         if entry_path is not None:
             parts = entry_path.rstrip("/").split("/")
             if len(parts) < 2:
-                raise ArcanaUsageError(
+                raise FrameTreeUsageError(
                     "BIDS paths should contain at least two '/' delimited parts (e.g. "
                     f"anat/T1w or freesurfer/recon-all), given '{entry_path}'"
                 )
@@ -606,9 +604,11 @@ METADATA_MAPPING = (
 
 def map_to_bids_names(dct, mappings=METADATA_MAPPING):
     return {
-        m[1]: dct[m[0]]
-        if len(m) == 2
-        else [map_to_bids_names(i, mappings=m[2]) for i in dct[m[0]]]
+        m[1]: (
+            dct[m[0]]
+            if len(m) == 2
+            else [map_to_bids_names(i, mappings=m[2]) for i in dct[m[0]]]
+        )
         for m in mappings
         if dct[m[0]] is not None
     }
@@ -616,9 +616,11 @@ def map_to_bids_names(dct, mappings=METADATA_MAPPING):
 
 def map_from_bids_names(dct, mappings=METADATA_MAPPING):
     return {
-        m[0]: dct[m[1]]
-        if len(m) == 2
-        else [map_to_bids_names(i, mappings=m[2]) for i in dict[m[1]]]
+        m[0]: (
+            dct[m[1]]
+            if len(m) == 2
+            else [map_to_bids_names(i, mappings=m[2]) for i in dict[m[1]]]
+        )
         for m in mappings
         if dct[m[1]] is not None
     }

@@ -9,13 +9,8 @@ from tempfile import mkdtemp
 from click.testing import CliRunner
 import docker
 from fileformats.medimage import NiftiGzX
-from arcana.core.deploy.image.components import BaseImage
-try:
-    from pydra import set_input_validator
-except ImportError:
-    pass
-else:
-    set_input_validator(True)
+from pydra2app.core.image import Pydra2AppImage
+
 
 log_level = logging.WARNING
 
@@ -162,7 +157,7 @@ def mock_bids_app_image(mock_bids_app_script, build_cache_dir):
         MOCK_BIDS_APP_IMAGE,
         mock_bids_app_script,
         build_cache_dir,
-        base_image=BaseImage().reference,
+        base_image=Pydra2AppImage().reference,
     )
 
 

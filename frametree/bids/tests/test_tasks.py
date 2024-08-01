@@ -4,7 +4,7 @@ from pathlib import Path
 import shutil
 import pytest
 from fileformats.medimage import NiftiGzX, NiftiGzXBvec
-from arcana.bids.tasks import bids_app, BidsInput, BidsOutput
+from frametree.bids.tasks import bids_app, BidsInput, BidsOutput
 from fileformats.text import Plain as Text
 from fileformats.generic import Directory
 

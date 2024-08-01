@@ -11,9 +11,9 @@ from dataclasses import dataclass
 import pytest
 import docker
 from fileformats.medimage import NiftiX
-from arcana.core import __version__
-from arcana.common import Clinical
-from arcana.bids.data import Bids
+from frametree.core import __version__
+from frametree.common import Clinical
+from frametree.bids.store import Bids
 
 
 MOCK_BIDS_APP_NAME = "mockapp"
@@ -48,10 +48,10 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
             "authors": MOCK_AUTHORS,
             "generated_by": [
                 {
-                    "name": "arcana",
+                    "name": "frametree",
                     "version": __version__,
                     "description": "Dataset was created programmatically from scratch",
-                    "code_url": "http://arcana.readthedocs.io",
+                    "code_url": "http://frametree.readthedocs.io",
                 }
             ],
         },
@@ -190,7 +190,9 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
     name = "bids-dataset"
 
     shutil.rmtree(path, ignore_errors=True)
-    dataset = Bids(json_edits=[(bp.path_re, bp.jq_script)],).create_dataset(
+    dataset = Bids(
+        json_edits=[(bp.path_re, bp.jq_script)],
+    ).create_dataset(
         id=path,
         name=name,
         leaves=[("1",)],
@@ -199,10 +201,10 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
             "authors": MOCK_AUTHORS,
             "generated_by": [
                 {
-                    "name": "arcana",
+                    "name": "frametree",
                     "version": __version__,
                     "description": "Dataset was created programmatically from scratch",
-                    "code_url": "http://arcana.readthedocs.io",
+                    "code_url": "http://frametree.readthedocs.io",
                 }
             ],
         },
