@@ -20,4 +20,4 @@ __pycache__
 .vscode
 *.egg-info
 ~*
-/arcana/bids/_version.py
+/frametree/bids/_version.py
