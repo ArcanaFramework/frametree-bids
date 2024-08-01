@@ -251,22 +251,24 @@ class Bids(LocalStore):
         fspath, key = self._fields_fspath_and_key(entry)
         self.update_json(fspath, key, field.primitive(field))
 
-    def get_fileset_provenance(self, entry: DataEntry) -> dict[str, ty.Any]:
+    def get_fileset_provenance(self, entry: DataEntry) -> ty.Dict[str, ty.Any]:
         with open(self._fileset_prov_fspath(entry)) as f:
             provenance = json.load(f)
         return provenance
 
-    def put_fileset_provenance(self, provenance: dict[str, ty.Any], entry: DataEntry):
+    def put_fileset_provenance(
+        self, provenance: ty.Dict[str, ty.Any], entry: DataEntry
+    ):
         with open(self._fileset_prov_fspath(entry), "w") as f:
             json.dump(provenance, f)
 
-    def get_field_provenance(self, entry: DataEntry) -> dict[str, ty.Any]:
+    def get_field_provenance(self, entry: DataEntry) -> ty.Dict[str, ty.Any]:
         fspath, key = self._fields_prov_fspath_and_key(entry)
         with open(fspath) as f:
             fields_provenance = json.load(f)
         return fields_provenance[key]
 
-    def put_field_provenance(self, provenance: dict[str, ty.Any], entry: DataEntry):
+    def put_field_provenance(self, provenance: ty.Dict[str, ty.Any], entry: DataEntry):
         fspath, key = self._fields_prov_fspath_and_key(entry)
         self.update_json(fspath, key, provenance)
 
@@ -429,7 +431,7 @@ class Bids(LocalStore):
         # in their file path
         if match := re.match(r".*/task=([^/]+)", entry.path):
             if "TaskName" not in json_dict:
-                json_dict["TaskName"] = match.group(1)
+                json_ty.Dict["TaskName"] = match.group(1)
         # Get dictionary containing file paths for all items in the same row
         # as the file-set so they can be used in the edits using Python
         # string templating
@@ -619,7 +621,7 @@ def map_from_bids_names(dct, mappings=METADATA_MAPPING):
         m[0]: (
             dct[m[1]]
             if len(m) == 2
-            else [map_to_bids_names(i, mappings=m[2]) for i in dict[m[1]]]
+            else [map_to_bids_names(i, mappings=m[2]) for i in ty.Dict[m[1]]]
         )
         for m in mappings
         if dct[m[1]] is not None

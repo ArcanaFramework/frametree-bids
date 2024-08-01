@@ -52,8 +52,8 @@ logger = logging.getLogger("frametree")
 
 def bids_app(
     name: str,
-    inputs: list[ty.Union[BidsInput, dict[str, str]]],
-    outputs: list[ty.Union[BidsOutput, dict[str, str]]],
+    inputs: list[ty.Union[BidsInput, ty.Dict[str, str]]],
+    outputs: list[ty.Union[BidsOutput, ty.Dict[str, str]]],
     executable: str = "",  # Use entrypoint of container,
     container_image: ty.Optional[str] = None,
     parameters: ty.Dict[str, type] = None,
@@ -73,12 +73,12 @@ def bids_app(
     name : str
         Name of the workflow/BIDS app. Will be used to name the 'derivatives'
         sub-directory where the app outputs are stored
-    inputs : list[ty.Union[AppField, dict[str, str]]]
+    inputs : list[ty.Union[AppField, ty.Dict[str, str]]]
         The inputs to be inserted into the BIDS dataset. Should be a list of tuples
         consisting of the the path the file/directory should be stored within a BIDS subject/session,
         e.g. anat/T1w, func/bold, and the DataFormat class it should be stored in, e.g.
         fileformats.medimage.NiftiGzX.
-    outputs : list[ty.Union[AppField, dict[str, str]]]
+    outputs : list[ty.Union[AppField, ty.Dict[str, str]]]
         The outputs to be extracted from the derivatives directory. Should be a list of tuples
         consisting of the the path the file/directory is saved by the app within a BIDS subject/session,
         e.g. freesurfer/recon-all, and the DataFormat class it is stored in,
@@ -88,7 +88,7 @@ def bids_app(
         empty string, i.e. the entrypoint of the BIDS app container image
     container_image : str, optional
         Name of the BIDS app image to wrap
-    parameters : dict[str, type], optional
+    parameters : ty.Dict[str, type], optional
         a list of parameters of the app (i.e. CLI flags) to be exposed to the user
         mapped to their data type.
     row_frequency : Clinical, optional
