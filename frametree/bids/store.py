@@ -435,7 +435,7 @@ class Bids(LocalStore):
         # in their file path
         if match := re.match(r".*/task=([^/]+)", entry.path):
             if "TaskName" not in json_dict:
-                json_ty.Dict["TaskName"] = match.group(1)
+                json_dict["TaskName"] = match.group(1)
         # Get dictionary containing file paths for all items in the same row
         # as the file-set so they can be used in the edits using Python
         # string templating
