@@ -1,5 +1,4 @@
-Arcana Extension - bids
-=======================
+# Frametree - BIDS
 .. image:: https://github.com/arcanaframework/arcana-bids/actions/workflows/tests.yml/badge.svg
    :target: https://github.com/arcanaframework/arcana-bids/actions/workflows/tests.yml
 .. image:: https://codecov.io/gh/arcanaframework/arcana-bids/branch/main/graph/badge.svg?token=UIS0OGPST7
@@ -15,21 +14,19 @@ Arcana Extension - bids
   :alt: Documentation Status
 
 
-An extension of the Arcana framework to work with Brain Imaging Data Structure (BIDS)
+An extension of [FrameTree](http://arcana.readthedocs.io) to work with Brain Imaging Data Structure (BIDS)
 datasets and apps
 
 
-Quick Installation
-------------------
+## Quick Installation
 
 This extension can be installed for Python 3 using *pip*::
 
-    $ pip3 install arcana-bids
+    $ pip3 install frametree-bids
 
-This will also install the core Arcana_ package and any required dependencies.
+This will also install the core FrameTree package and any required dependencies.
 
-License
--------
+## License
 
 This work is licensed under a
 `Creative Commons Attribution 4.0 International License <http://creativecommons.org/licenses/by/4.0/>`_
@@ -38,6 +35,3 @@ This work is licensed under a
   :target: http://creativecommons.org/licenses/by/4.0/
   :alt: Creative Commons Attribution 4.0 International License
 
-
-
-.. _Arcana: http://arcana.readthedocs.io
