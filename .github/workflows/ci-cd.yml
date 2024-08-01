@@ -43,7 +43,7 @@ jobs:
     - name: Install Package
       run: python3 -m pip install --break-system-packages -e .[test]
     - name: Change out of root directory
-      run: cd docs
+      run: cd .github
     - name: Pytest
       run: pytest -vvs --cov frametree --cov-config .coveragerc --cov-report xml .
     - name: Upload coverage to Codecov
