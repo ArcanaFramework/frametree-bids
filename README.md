@@ -1,11 +1,11 @@
 # Frametree - BIDS
-[![Tests](https://github.com/arcanaframework/arcana-bids/actions/workflows/tests.yml/badge.svg)](https://github.com/arcanaframework/arcana-bids/actions/workflows/tests.yml)
-[![Codecov](https://codecov.io/gh/arcanaframework/arcana-bids/branch/main/graph/badge.svg?token=UIS0OGPST7)](https://codecov.io/gh/arcanaframework/arcana-bids)
-[![Python versions](https://img.shields.io/pypi/pyversions/arcana-bids.svg)](https://pypi.python.org/pypi/arcana-bids/)
-[![Latest Version](https://img.shields.io/pypi/v/arcana-bids.svg)](https://pypi.python.org/pypi/arcana-bids/)
-[![Documentation Status](https://readthedocs.org/projects/arcana/badge/?version=latest)](https://arcanaframework.github.io/arcana)
+[![Tests](https://github.com/arcanaframework/frametree-bids/actions/workflows/tests.yml/badge.svg)](https://github.com/arcanaframework/frametree-bids/actions/workflows/tests.yml)
+[![Codecov](https://codecov.io/gh/arcanaframework/frametree-bids/branch/main/graph/badge.svg?token=UIS0OGPST7)](https://codecov.io/gh/arcanaframework/frametree-bids)
+[![Python versions](https://img.shields.io/pypi/pyversions/frametree-bids.svg)](https://pypi.python.org/pypi/frametree-bids/)
+[![Latest Version](https://img.shields.io/pypi/v/frametree-bids.svg)](https://pypi.python.org/pypi/frametree-bids/)
+[![Documentation Status](https://readthedocs.org/projects/frametree/badge/?version=latest)](https://arcanaframework.github.io/frametree)
 
-An extension of [FrameTree](http://arcana.readthedocs.io) to work with Brain Imaging Data Structure (BIDS) datasets and apps
+An extension of [FrameTree](http://frametree.readthedocs.io) to work with Brain Imaging Data Structure (BIDS) datasets and apps
 
 ## Quick Installation
 
