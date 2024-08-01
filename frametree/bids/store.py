@@ -275,7 +275,7 @@ class Bids(LocalStore):
     def create_data_tree(
         self,
         id: str,
-        leaves: ty.List[tuple[str, ...]],
+        leaves: ty.List[ty.Tuple[str, ...]],
         hierarchy: ty.List[str],
         **kwargs,
     ):
@@ -324,7 +324,7 @@ class Bids(LocalStore):
     def create_dataset(
         self,
         id: str,
-        leaves: ty.List[tuple[str, ...]],
+        leaves: ty.List[ty.Tuple[str, ...]],
         hierarchy: ty.List[str] = ["session"],
         space: type = Clinical,
         name: ty.Optional[str] = None,
@@ -407,7 +407,7 @@ class Bids(LocalStore):
     def _fileset_fspath(self, entry: DataEntry) -> Path:
         return Path(entry.row.dataset.id) / entry.uri
 
-    def _fields_fspath_and_key(self, entry: DataEntry) -> tuple[Path, str]:
+    def _fields_fspath_and_key(self, entry: DataEntry) -> ty.Tuple[Path, str]:
         relpath, key = entry.uri.split("::")
         fspath = Path(entry.row.dataset.id) / relpath
         return fspath, key
@@ -415,7 +415,7 @@ class Bids(LocalStore):
     def _fileset_prov_fspath(self, entry: DataEntry) -> Path:
         return self._fileset_fspath(entry).with_suffix(self.PROV_SUFFIX)
 
-    def _fields_prov_fspath_and_key(self, entry: DataEntry) -> tuple[Path, str]:
+    def _fields_prov_fspath_and_key(self, entry: DataEntry) -> ty.Tuple[Path, str]:
         fields_fspath, key = self._fields_fspath_and_key(entry)
         return fields_fspath.parent / self.FIELDS_PROV_FNAME, key
 
@@ -460,7 +460,7 @@ class Bids(LocalStore):
             json.dump(json_dict, f)
 
     @classmethod
-    def _extract_entities(cls, relpath: Path) -> tuple[str, ty.List[str], str]:
+    def _extract_entities(cls, relpath: Path) -> ty.Tuple[str, ty.List[str], str]:
         relpath = Path(relpath)
         path = relpath.parent
         name_parts = relpath.name.split(".")
