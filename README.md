@@ -1,5 +1,5 @@
 # Frametree - BIDS
-[![Tests](https://github.com/arcanaframework/frametree-bids/actions/workflows/tests.yml/badge.svg)](https://github.com/arcanaframework/frametree-bids/actions/workflows/tests.yml)
+[![Tests](https://github.com/arcanaframework/frametree-bids/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/arcanaframework/frametree-bids/actions/workflows/ci-cd.yml)
 [![Codecov](https://codecov.io/gh/arcanaframework/frametree-bids/branch/main/graph/badge.svg?token=UIS0OGPST7)](https://codecov.io/gh/arcanaframework/frametree-bids)
 [![Python versions](https://img.shields.io/pypi/pyversions/frametree-bids.svg)](https://pypi.python.org/pypi/frametree-bids/)
 [![Latest Version](https://img.shields.io/pypi/v/frametree-bids.svg)](https://pypi.python.org/pypi/frametree-bids/)
