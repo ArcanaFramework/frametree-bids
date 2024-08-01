@@ -52,8 +52,8 @@ logger = logging.getLogger("frametree")
 
 def bids_app(
     name: str,
-    inputs: list[ty.Union[BidsInput, ty.Dict[str, str]]],
-    outputs: list[ty.Union[BidsOutput, ty.Dict[str, str]]],
+    inputs: ty.List[ty.Union[BidsInput, ty.Dict[str, str]]],
+    outputs: ty.List[ty.Union[BidsOutput, ty.Dict[str, str]]],
     executable: str = "",  # Use entrypoint of container,
     container_image: ty.Optional[str] = None,
     parameters: ty.Dict[str, type] = None,

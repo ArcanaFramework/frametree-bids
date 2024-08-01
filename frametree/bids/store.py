@@ -273,7 +273,11 @@ class Bids(LocalStore):
         self.update_json(fspath, key, provenance)
 
     def create_data_tree(
-        self, id: str, leaves: list[tuple[str, ...]], hierarchy: list[str], **kwargs
+        self,
+        id: str,
+        leaves: ty.List[tuple[str, ...]],
+        hierarchy: ty.List[str],
+        **kwargs,
     ):
         if hierarchy not in self.VALID_HIERARCHIES:
             raise FrameTreeUsageError(
@@ -320,8 +324,8 @@ class Bids(LocalStore):
     def create_dataset(
         self,
         id: str,
-        leaves: list[tuple[str, ...]],
-        hierarchy: list[str] = ["session"],
+        leaves: ty.List[tuple[str, ...]],
+        hierarchy: ty.List[str] = ["session"],
         space: type = Clinical,
         name: ty.Optional[str] = None,
         **kwargs,
@@ -456,7 +460,7 @@ class Bids(LocalStore):
             json.dump(json_dict, f)
 
     @classmethod
-    def _extract_entities(cls, relpath: Path) -> tuple[str, list[str], str]:
+    def _extract_entities(cls, relpath: Path) -> tuple[str, ty.List[str], str]:
         relpath = Path(relpath)
         path = relpath.parent
         name_parts = relpath.name.split(".")
