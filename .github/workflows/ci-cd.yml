@@ -47,9 +47,9 @@ jobs:
     - name: Pytest
       run: pytest -vvs --cov frametree --cov-config .coveragerc --cov-report xml .
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v4
       with:
-        fail_ci_if_error: false
+        fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
 
   build:
@@ -71,7 +71,7 @@ jobs:
     - name: Install build tools
       run: python3 -m pip install --break-system-packages build twine
     - name: Build source and wheel distributions
-      run: python3 -m build 
+      run: python3 -m build
     - name: Check distributions
       run: twine check dist/*
     - uses: actions/upload-artifact@v3
