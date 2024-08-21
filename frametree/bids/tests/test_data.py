@@ -50,7 +50,7 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
                 {
                     "name": "frametree",
                     "version": __version__,
-                    "description": "Dataset was created programmatically from scratch",
+                    "description": "Grid was created programmatically from scratch",
                     "code_url": "http://frametree.readthedocs.io",
                 }
             ],
@@ -99,7 +99,7 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
     ).decode("utf-8")
     assert bids_success_str in result
 
-    reloaded = Bids().load_dataset(id=path, name=dataset_name)
+    reloaded = Bids().load_grid(id=path, name=dataset_name)
     reloaded.add_sink(
         "t1w", datatype=NiftiX, path="anat/T1w"
     )  # add sink to reloaded so it matches
@@ -190,9 +190,7 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
     name = "bids-dataset"
 
     shutil.rmtree(path, ignore_errors=True)
-    dataset = Bids(
-        json_edits=[(bp.path_re, bp.jq_script)],
-    ).create_dataset(
+    dataset = Bids(json_edits=[(bp.path_re, bp.jq_script)],).create_dataset(
         id=path,
         name=name,
         leaves=[("1",)],
@@ -203,7 +201,7 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
                 {
                     "name": "frametree",
                     "version": __version__,
-                    "description": "Dataset was created programmatically from scratch",
+                    "description": "Grid was created programmatically from scratch",
                     "code_url": "http://frametree.readthedocs.io",
                 }
             ],

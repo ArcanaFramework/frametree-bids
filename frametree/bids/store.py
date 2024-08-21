@@ -13,7 +13,7 @@ from fileformats.generic import Directory
 from fileformats.medimage.nifti import WithBids, NiftiGzX
 from frametree.core.exceptions import FrameTreeUsageError
 from frametree.core.tree import DataTree
-from frametree.core.set import Dataset
+from frametree.core.grid import Grid
 from frametree.common import Clinical
 from frametree.core.entry import DataEntry
 from frametree.core.row import DataRow
@@ -94,11 +94,11 @@ class Bids(LocalStore):
 
         Parameters
         ----------
-        dataset : Dataset
+        dataset : Grid
             The dataset to construct the tree dimensions for
         """
-        root_dir = Path(tree.dataset.id)
-        if "group" in tree.dataset.hierarchy:
+        root_dir = Path(tree.grid.id)
+        if "group" in tree.grid.hierarchy:
             with open(root_dir / "participants.tsv") as f:
                 lines = f.read().splitlines()
             participants = {}
@@ -111,7 +111,7 @@ class Bids(LocalStore):
             if not subject_dir.name.startswith("sub-"):
                 continue
             subject_id = subject_dir.name[len("sub-") :]
-            if "group" in tree.dataset.hierarchy:
+            if "group" in tree.grid.hierarchy:
                 tree_path = [participants[subject_id]["group"]]
             else:
                 tree_path = []
@@ -124,7 +124,7 @@ class Bids(LocalStore):
                 tree.add_leaf([subject_id])
 
     def populate_row(self, row: DataRow):
-        root_dir = row.dataset.root_dir
+        root_dir = row.grid.root_dir
         relpath = self._rel_row_path(row)
         session_path = root_dir / relpath
         session_path.mkdir(exist_ok=True)
@@ -183,7 +183,7 @@ class Bids(LocalStore):
                 subject_id=row.frequency_id("subject"),
                 timepoint_id=(
                     row.frequency_id("timepoint")
-                    if "timepoint" in row.dataset.hierarchy
+                    if "timepoint" in row.grid.hierarchy
                     else None
                 ),
                 ext=datatype.ext,
@@ -202,7 +202,7 @@ class Bids(LocalStore):
             namespace, field_name = path.split("/")
         except ValueError:
             raise FrameTreeUsageError(
-                f"Field path '{path}', should contain two sections delimted by '/', "
+                f"Field path '{path}', should contain two sections delimited by '/', "
                 "the first is the pipeline name that generated the field, "
                 "and the second the field name"
             )
@@ -213,7 +213,7 @@ class Bids(LocalStore):
                 subject_id=row.frequency_id("subject"),
                 timepoint_id=(
                     row.frequency_id("timepoint")
-                    if Clinical.timepoint in row.dataset.hierarchy
+                    if Clinical.timepoint in row.grid.hierarchy
                     else None
                 ),
             )
@@ -281,7 +281,7 @@ class Bids(LocalStore):
     ):
         if hierarchy not in self.VALID_HIERARCHIES:
             raise FrameTreeUsageError(
-                f"Invalid hiearchy {hierarchy} provided to create a new data tree "
+                f"Invalid hierarchy {hierarchy} provided to create a new data tree "
                 f"needs to be one of the following:\n"
                 + "\n".join(str(h) for h in self.VALID_HIERARCHIES)
             )
@@ -317,8 +317,8 @@ class Bids(LocalStore):
     # Overrides of API #
     ####################
 
-    def save_dataset(self, dataset: Dataset, name: ty.Optional[str] = None):
-        super().save_dataset(dataset, name=name)
+    def save_grid_definition(self, dataset: Grid, name: ty.Optional[str] = None):
+        super().save_grid(dataset, name=name)
         self._save_metadata(dataset)
 
     def create_dataset(
@@ -348,7 +348,7 @@ class Bids(LocalStore):
 
         Returns
         -------
-        Dataset
+        Grid
             the newly created dataset
         """
         dataset = super().create_dataset(
@@ -361,7 +361,7 @@ class Bids(LocalStore):
     # Helper methods
     ################
 
-    def _save_metadata(self, dataset: Dataset):
+    def _save_metadata(self, dataset: Grid):
         root_dir = Path(dataset.id)
         dataset_description_fspath = root_dir / "dataset_description.json"
         dataset_description = map_to_bids_names(
@@ -405,11 +405,11 @@ class Bids(LocalStore):
                 json.dump(participants_desc, f)
 
     def _fileset_fspath(self, entry: DataEntry) -> Path:
-        return Path(entry.row.dataset.id) / entry.uri
+        return Path(entry.row.grid.id) / entry.uri
 
     def _fields_fspath_and_key(self, entry: DataEntry) -> ty.Tuple[Path, str]:
         relpath, key = entry.uri.split("::")
-        fspath = Path(entry.row.dataset.id) / relpath
+        fspath = Path(entry.row.grid.id) / relpath
         return fspath, key
 
     def _fileset_prov_fspath(self, entry: DataEntry) -> Path:
@@ -554,7 +554,7 @@ class Bids(LocalStore):
     @classmethod
     def _rel_row_path(cls, row: DataRow) -> Path:
         relpath = Path(f"sub-{row.frequency_id('subject')}")
-        if "timepoint" in row.dataset.hierarchy:
+        if "timepoint" in row.grid.hierarchy:
             relpath /= f"ses-{row.frequency_id('timepoint')}"
         return relpath
 
