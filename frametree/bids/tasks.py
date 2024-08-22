@@ -187,7 +187,7 @@ def bids_app(
                 + [(i, ty.Union[str, Path]) for i in input_names]
             ),
             out_fields=[
-                ("dataset", FrameSet),
+                ("frameset", FrameSet),
                 ("completed", bool),
             ],
             name="to_bids",
@@ -279,7 +279,7 @@ def bids_app(
             app_name=name,
             # We pass dataset object modified by to_bids rather than initial one passed
             # to the bids_app method
-            dataset=wf.to_bids.lzout.set,
+            dataset=wf.to_bids.lzout.frameset,
             output_dir=app_output_dir,
             row_frequency=row_frequency,
             outputs=outputs,
