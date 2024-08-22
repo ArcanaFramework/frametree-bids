@@ -22,7 +22,7 @@
 # ):
 
 #     blueprint = TestDatasetBlueprint(
-#         space=Clinical,
+#         axes=Clinical,
 #         hierarchy=["subject", "session"],
 #         dim_lengths=[1, 1, 1],
 #         entries=[
@@ -73,11 +73,11 @@
 
 #     blueprint = dataset.__annotations__["blueprint"]
 
-#     dataset_locator = f"{dataset_path}"
+#     address = f"{dataset_path}"
 #     # Start generating the arguments for the CLI
 #     # Add source to loaded dataset
 #     args = [
-#         dataset_locator,
+#         address,
 #         "--plugin",
 #         "serial",
 #         "--work",

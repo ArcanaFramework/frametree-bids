@@ -16,7 +16,7 @@ from pydra.engine.specs import (
 )
 from pydra.engine.environments import Docker, Native
 from frametree.core import __version__
-from frametree.core.grid import Grid
+from frametree.core.frameset import FrameSet
 from fileformats.core import FileSet
 from fileformats.generic import Directory
 from frametree.common import Clinical
@@ -59,7 +59,7 @@ def bids_app(
     parameters: ty.Dict[str, type] = None,
     row_frequency: ty.Union[Clinical, str] = Clinical.session,
     container_type: str = "docker",
-    dataset: ty.Optional[ty.Union[str, Path, Grid]] = None,
+    dataset: ty.Optional[ty.Union[str, Path, FrameSet]] = None,
     app_output_dir: ty.Optional[Path] = None,
     app_work_dir: ty.Optional[Path] = None,
     json_edits: ty.List[ty.Tuple[str, str]] = None,
@@ -96,7 +96,7 @@ def bids_app(
     container_type : str, optional
         The virtualisation method to run the main app task, can be one of
         'docker' or 'singularity'
-    dataset : str or Grid, optional
+    dataset : str or FrameSet, optional
         The dataset to run the BIDS app on. If a string or Path is provided
         then a new BIDS dataset is created at that location with a single
         subject (sub-DEFAULT). If nothing is provided then a dataset is
@@ -139,7 +139,7 @@ def bids_app(
     # Create BIDS dataset to hold translated data
     if dataset is None:
         dataset = Path(tempfile.mkdtemp()) / "frametree_bids_dataset"
-    if not isinstance(dataset, Grid):
+    if not isinstance(dataset, FrameSet):
         dataset = Bids().create_dataset(
             id=dataset,
             name=name + "_dataset",
@@ -179,7 +179,7 @@ def bids_app(
                 [
                     ("row_frequency", Clinical),
                     ("inputs", ty.List[BidsInput]),
-                    ("dataset", ty.Union[Grid, str]),
+                    ("dataset", ty.Union[FrameSet, str]),
                     ("id", str),
                     ("json_edits", str),
                     ("fixed_json_edits", ty.List[ty.Tuple[str, str]]),
@@ -187,7 +187,7 @@ def bids_app(
                 + [(i, ty.Union[str, Path]) for i in input_names]
             ),
             out_fields=[
-                ("dataset", Grid),
+                ("dataset", FrameSet),
                 ("completed", bool),
             ],
             name="to_bids",
@@ -266,7 +266,7 @@ def bids_app(
         func_task(
             extract_bids,
             in_fields=[
-                ("dataset", Grid),
+                ("dataset", FrameSet),
                 ("row_frequency", Clinical),
                 ("app_name", str),
                 ("output_dir", Path),
@@ -279,7 +279,7 @@ def bids_app(
             app_name=name,
             # We pass dataset object modified by to_bids rather than initial one passed
             # to the bids_app method
-            dataset=wf.to_bids.lzout.grid,
+            dataset=wf.to_bids.lzout.set,
             output_dir=app_output_dir,
             row_frequency=row_frequency,
             outputs=outputs,
@@ -335,7 +335,7 @@ def to_bids(
 
 
 def extract_bids(
-    dataset: Grid,
+    dataset: FrameSet,
     row_frequency: Clinical,
     app_name: str,
     output_dir: Path,
@@ -349,7 +349,7 @@ def extract_bids(
 
     Parameters
     ----------
-    dataset : Grid
+    dataset : FrameSet
     row_frequency : Clinical
     output_dir : Path
     outputs : ty.List[ty.Tuple[str, type]]

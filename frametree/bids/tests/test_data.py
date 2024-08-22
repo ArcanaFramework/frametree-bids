@@ -30,11 +30,11 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
     dataset = Bids().create_dataset(
         id=path,
         name=dataset_name,
-        space=Clinical,
-        hierarchy=["group", "subject", "timepoint"],
+        axes=Clinical,
+        hierarchy=["group", "subject", "visit"],
         leaves=[
-            (group, f"{group}{member}", timepoint)
-            for group, member, timepoint in itertools.product(
+            (group, f"{group}{member}", visit)
+            for group, member, visit in itertools.product(
                 ["test", "control"],
                 [str(i) for i in range(1, 4)],
                 [str(i) for i in range(1, 3)],
@@ -50,7 +50,7 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
                 {
                     "name": "frametree",
                     "version": __version__,
-                    "description": "Grid was created programmatically from scratch",
+                    "description": "FrameSet was created programmatically from scratch",
                     "code_url": "http://frametree.readthedocs.io",
                 }
             ],
@@ -99,7 +99,7 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
     ).decode("utf-8")
     assert bids_success_str in result
 
-    reloaded = Bids().load_grid(id=path, name=dataset_name)
+    reloaded = Bids().load_frameset(id=path, name=dataset_name)
     reloaded.add_sink(
         "t1w", datatype=NiftiX, path="anat/T1w"
     )  # add sink to reloaded so it matches
@@ -201,7 +201,7 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
                 {
                     "name": "frametree",
                     "version": __version__,
-                    "description": "Grid was created programmatically from scratch",
+                    "description": "FrameSet was created programmatically from scratch",
                     "code_url": "http://frametree.readthedocs.io",
                 }
             ],
