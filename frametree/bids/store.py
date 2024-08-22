@@ -317,7 +317,7 @@ class Bids(LocalStore):
     # Overrides of API #
     ####################
 
-    def save_grid_definition(self, dataset: FrameSet, name: ty.Optional[str] = None):
+    def save_frameset(self, dataset: FrameSet, name: ty.Optional[str] = None):
         super().save_frameset(dataset, name=name)
         self._save_metadata(dataset)
 
