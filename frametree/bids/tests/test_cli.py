@@ -12,7 +12,7 @@
 # from frametree.core.serialize import ClassResolver
 # from frametree.core.utils import path2varname
 # from frametree.core.utils import show_cli_trace
-# from pydra2app.core.image import App
+# from pipeline2app.core.image import App
 # from frametree.bids.store import Bids
 
 

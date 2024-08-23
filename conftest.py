@@ -9,7 +9,7 @@ from tempfile import mkdtemp
 from click.testing import CliRunner
 import docker
 from fileformats.medimage import NiftiGzX
-from pydra2app.core.image import Pydra2AppImage
+from pipeline2app.core.image import Pydra2AppImage
 
 
 log_level = logging.WARNING
@@ -94,9 +94,10 @@ def mock_bids_app_script():
         ("dwi/dwi", NiftiGzX),
     ]:
         subdir, suffix = inpt_path.split("/")
+        fpath = f"$BIDS_DATASET/sub-${{SUBJ_ID}}/{subdir}/sub-${{SUBJ_ID}}_{suffix}{datatype.ext}"
         file_tests += f"""
-        if [ ! -f "$BIDS_DATASET/sub-${{SUBJ_ID}}/{subdir}/sub-${{SUBJ_ID}}_{suffix}{datatype.ext}" ]; then
-            echo "Did not find {suffix} file at $BIDS_DATASET/sub-${{SUBJ_ID}}/{subdir}/sub-${{SUBJ_ID}}_{suffix}{datatype.ext}"
+        if [ ! -f {fpath} ]; then
+            echo "Did not find {suffix} file at {fpath}"
             exit 1;
         fi
         """
