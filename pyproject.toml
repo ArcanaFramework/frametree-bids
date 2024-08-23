@@ -46,7 +46,7 @@ doc = [
 ]
 test = [
     "fileformats-testing",
-    "pydra2app",
+    "pipeline2app",
     "medimages4tests >=0.3",
     "pytest>=5.4.3",
     "pytest-cov>=2.12.1",

@@ -13,7 +13,7 @@ from fileformats.generic import Directory
 from fileformats.medimage.nifti import WithBids, NiftiGzX
 from frametree.core.exceptions import FrameTreeUsageError
 from frametree.core.tree import DataTree
-from frametree.core.set import Dataset
+from frametree.core.frameset import FrameSet
 from frametree.common import Clinical
 from frametree.core.entry import DataEntry
 from frametree.core.row import DataRow
@@ -68,16 +68,16 @@ class Bids(LocalStore):
     name: str = "bids"
 
     BIDS_VERSION = "1.0.1"
-    DEFAULT_SPACE = Clinical
+    DEFAULT_AXES = Clinical
 
     PROV_SUFFIX = ".provenance"
     FIELDS_FNAME = "__fields__"
     FIELDS_PROV_FNAME = "__fields_provenance__"
 
     VALID_HIERARCHIES = (
-        ["subject", "timepoint"],
+        ["subject", "visit"],
         ["session"],
-        ["group", "subject", "timepoint"],
+        ["group", "subject", "visit"],
         ["group", "session"],
     )
 
@@ -94,11 +94,11 @@ class Bids(LocalStore):
 
         Parameters
         ----------
-        dataset : Dataset
+        dataset : FrameSet
             The dataset to construct the tree dimensions for
         """
-        root_dir = Path(tree.dataset.id)
-        if "group" in tree.dataset.hierarchy:
+        root_dir = Path(tree.frameset.id)
+        if "group" in tree.frameset.hierarchy:
             with open(root_dir / "participants.tsv") as f:
                 lines = f.read().splitlines()
             participants = {}
@@ -111,20 +111,20 @@ class Bids(LocalStore):
             if not subject_dir.name.startswith("sub-"):
                 continue
             subject_id = subject_dir.name[len("sub-") :]
-            if "group" in tree.dataset.hierarchy:
+            if "group" in tree.frameset.hierarchy:
                 tree_path = [participants[subject_id]["group"]]
             else:
                 tree_path = []
             tree_path.append(subject_id)
             if any(d.name.startswith("ses-") for d in subject_dir.iterdir()):
                 for sess_dir in subject_dir.iterdir():
-                    timepoint_id = sess_dir.name[len("ses-") :]
-                    tree.add_leaf(tree_path + [timepoint_id])
+                    visit_id = sess_dir.name[len("ses-") :]
+                    tree.add_leaf(tree_path + [visit_id])
             else:
                 tree.add_leaf([subject_id])
 
     def populate_row(self, row: DataRow):
-        root_dir = row.dataset.root_dir
+        root_dir = row.frameset.root_dir
         relpath = self._rel_row_path(row)
         session_path = root_dir / relpath
         session_path.mkdir(exist_ok=True)
@@ -181,9 +181,9 @@ class Bids(LocalStore):
             self._entry2fs_path(
                 path,
                 subject_id=row.frequency_id("subject"),
-                timepoint_id=(
-                    row.frequency_id("timepoint")
-                    if "timepoint" in row.dataset.hierarchy
+                visit_id=(
+                    row.frequency_id("visit")
+                    if "visit" in row.frameset.hierarchy
                     else None
                 ),
                 ext=datatype.ext,
@@ -202,7 +202,7 @@ class Bids(LocalStore):
             namespace, field_name = path.split("/")
         except ValueError:
             raise FrameTreeUsageError(
-                f"Field path '{path}', should contain two sections delimted by '/', "
+                f"Field path '{path}', should contain two sections delimited by '/', "
                 "the first is the pipeline name that generated the field, "
                 "and the second the field name"
             )
@@ -211,9 +211,9 @@ class Bids(LocalStore):
             + self._entry2fs_path(
                 f"{namespace}/{self.FIELDS_FNAME}",
                 subject_id=row.frequency_id("subject"),
-                timepoint_id=(
-                    row.frequency_id("timepoint")
-                    if Clinical.timepoint in row.dataset.hierarchy
+                visit_id=(
+                    row.frequency_id("visit")
+                    if Clinical.visit in row.frameset.hierarchy
                     else None
                 ),
             )
@@ -281,7 +281,7 @@ class Bids(LocalStore):
     ):
         if hierarchy not in self.VALID_HIERARCHIES:
             raise FrameTreeUsageError(
-                f"Invalid hiearchy {hierarchy} provided to create a new data tree "
+                f"Invalid hierarchy {hierarchy} provided to create a new data tree "
                 f"needs to be one of the following:\n"
                 + "\n".join(str(h) for h in self.VALID_HIERARCHIES)
             )
@@ -297,13 +297,13 @@ class Bids(LocalStore):
                 subject_id = ids["subject"]
             except KeyError:
                 subject_id = ids["session"]
-            timepoint_id = ids.get("timepoint")
+            visit_id = ids.get("visit")
             group_id = ids.get("group")
             if group_id:
                 group_ids.add(group_id)
                 subjects_group_id[subject_id] = group_id
             sess_dir_fspath = root_dir / self._entry2fs_path(
-                entry_path=None, subject_id=subject_id, timepoint_id=timepoint_id
+                entry_path=None, subject_id=subject_id, visit_id=visit_id
             )
             sess_dir_fspath.mkdir(parents=True, exist_ok=True)
         # Add participants.tsv to define the groups if present
@@ -317,8 +317,8 @@ class Bids(LocalStore):
     # Overrides of API #
     ####################
 
-    def save_dataset(self, dataset: Dataset, name: ty.Optional[str] = None):
-        super().save_dataset(dataset, name=name)
+    def save_frameset(self, dataset: FrameSet, name: ty.Optional[str] = None):
+        super().save_frameset(dataset, name=name)
         self._save_metadata(dataset)
 
     def create_dataset(
@@ -326,7 +326,7 @@ class Bids(LocalStore):
         id: str,
         leaves: ty.List[ty.Tuple[str, ...]],
         hierarchy: ty.List[str] = ["session"],
-        space: type = Clinical,
+        axes: type = Clinical,
         name: ty.Optional[str] = None,
         **kwargs,
     ):
@@ -343,16 +343,16 @@ class Bids(LocalStore):
             save the dataset with the default name pass an empty string.
         hierarchy : list[str], optional
             hierarchy of the dataset tree, by default single level (i.e. one session per subject)
-        space : type, optional
-            the space of the dataset
+        axes : type, optional
+            the axes of the dataset
 
         Returns
         -------
-        Dataset
+        FrameSet
             the newly created dataset
         """
         dataset = super().create_dataset(
-            id=id, leaves=leaves, hierarchy=hierarchy, space=space, name=name, **kwargs
+            id=id, leaves=leaves, hierarchy=hierarchy, axes=axes, name=name, **kwargs
         )
         self._save_metadata(dataset)
         return dataset
@@ -361,7 +361,7 @@ class Bids(LocalStore):
     # Helper methods
     ################
 
-    def _save_metadata(self, dataset: Dataset):
+    def _save_metadata(self, dataset: FrameSet):
         root_dir = Path(dataset.id)
         dataset_description_fspath = root_dir / "dataset_description.json"
         dataset_description = map_to_bids_names(
@@ -405,11 +405,11 @@ class Bids(LocalStore):
                 json.dump(participants_desc, f)
 
     def _fileset_fspath(self, entry: DataEntry) -> Path:
-        return Path(entry.row.dataset.id) / entry.uri
+        return Path(entry.row.frameset.id) / entry.uri
 
     def _fields_fspath_and_key(self, entry: DataEntry) -> ty.Tuple[Path, str]:
         relpath, key = entry.uri.split("::")
-        fspath = Path(entry.row.dataset.id) / relpath
+        fspath = Path(entry.row.frameset.id) / relpath
         return fspath, key
 
     def _fileset_prov_fspath(self, entry: DataEntry) -> Path:
@@ -497,7 +497,7 @@ class Bids(LocalStore):
         cls,
         entry_path: str,
         subject_id: str,
-        timepoint_id: ty.Optional[str] = None,
+        visit_id: ty.Optional[str] = None,
         ext: str = "",
     ) -> Path:
         """Converts a BIDS filename into an FrameTree "entry-path".
@@ -509,7 +509,7 @@ class Bids(LocalStore):
             a path of an entry to be converted into a BIDS file-path
         subject_id : str
             the subject ID of the entry
-        timepoint_id : str, optional
+        visit_id : str, optional
             the session ID of the entry, by default None
         ext : str, optional
             file extension to be appended to the path, by default ""
@@ -528,9 +528,9 @@ class Bids(LocalStore):
                 )
         fname = f"sub-{subject_id}"
         relpath = Path(f"sub-{subject_id}")
-        if timepoint_id is not None:
-            fname += f"_ses-{timepoint_id}"
-            relpath /= f"ses-{timepoint_id}"
+        if visit_id is not None:
+            fname += f"_ses-{visit_id}"
+            relpath /= f"ses-{visit_id}"
         if entry_path is not None:
             entities = []
             relpath /= parts[0]  # BIDS data type or dataset/pipeline name
@@ -554,8 +554,8 @@ class Bids(LocalStore):
     @classmethod
     def _rel_row_path(cls, row: DataRow) -> Path:
         relpath = Path(f"sub-{row.frequency_id('subject')}")
-        if "timepoint" in row.dataset.hierarchy:
-            relpath /= f"ses-{row.frequency_id('timepoint')}"
+        if "visit" in row.frameset.hierarchy:
+            relpath /= f"ses-{row.frequency_id('visit')}"
         return relpath
 
     def definition_save_path(self, dataset_id: str, name: str) -> Path:
