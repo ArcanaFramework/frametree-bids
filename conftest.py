@@ -9,7 +9,7 @@ from tempfile import mkdtemp
 from click.testing import CliRunner
 import docker
 from fileformats.medimage import NiftiGzX
-from pipeline2app.core.image import P2AImage
+from pydra2app.core.image import P2AImage
 
 
 log_level = logging.WARNING
