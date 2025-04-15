@@ -79,7 +79,7 @@
 #     args = [
 #         address,
 #         "--plugin",
-#         "serial",
+#         "debug",
 #         "--work",
 #         str(work_dir),
 #         "--spec-path",
