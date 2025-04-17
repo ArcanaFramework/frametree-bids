@@ -9,7 +9,7 @@ from tempfile import mkdtemp
 from click.testing import CliRunner
 import docker
 from fileformats.medimage import NiftiGzX
-from pipeline2app.core.image import Pydra2AppImage
+from pydra2app.core.image import P2AImage
 
 
 log_level = logging.WARNING
@@ -158,7 +158,7 @@ def mock_bids_app_image(mock_bids_app_script, build_cache_dir):
         MOCK_BIDS_APP_IMAGE,
         mock_bids_app_script,
         build_cache_dir,
-        base_image=Pydra2AppImage().reference,
+        base_image=P2AImage().reference,
     )
 
 

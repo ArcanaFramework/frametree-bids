@@ -12,7 +12,7 @@
 # from frametree.core.serialize import ClassResolver
 # from frametree.core.utils import path2varname
 # from frametree.core.utils import show_cli_trace
-# from pipeline2app.core.image import App
+# from pydra2app.core.image import App
 # from frametree.bids.store import Bids
 
 
@@ -79,7 +79,7 @@
 #     args = [
 #         address,
 #         "--plugin",
-#         "serial",
+#         "debug",
 #         "--work",
 #         str(work_dir),
 #         "--spec-path",
