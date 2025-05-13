@@ -11,6 +11,7 @@ from frametree.core.store import LocalStore
 from fileformats.core import FileSet, Field
 from fileformats.generic import Directory
 from fileformats.medimage.nifti import WithBids, NiftiGzX
+from pydra.utils.typing import is_fileset_or_union
 from frametree.core.exceptions import FrameTreeUsageError
 from frametree.core.tree import DataTree
 from frametree.core.frameset import FrameSet
@@ -207,17 +208,20 @@ class Bids(LocalStore):
                 "and the second the field name"
             )
         return (
-            base_uri
-            + self._entry2fs_path(
-                f"{namespace}/{self.FIELDS_FNAME}",
-                subject_id=row.frequency_id("subject"),
-                visit_id=(
-                    row.frequency_id("visit")
-                    if Clinical.visit in row.frameset.hierarchy
-                    else None
-                ),
+            str(
+                Path(base_uri)
+                / self._entry2fs_path(
+                    f"{namespace}/{self.FIELDS_FNAME}",
+                    subject_id=row.frequency_id("subject"),
+                    visit_id=(
+                        row.frequency_id("visit")
+                        if Clinical.visit in row.frameset.hierarchy
+                        else None
+                    ),
+                )
             )
-        ) + f"::{field_name}"
+            + f"::{field_name}"
+        )
 
     def get_fileset(self, entry: DataEntry, datatype: type) -> FileSet:
         return datatype(self._fileset_fspath(entry))
@@ -441,16 +445,19 @@ class Bids(LocalStore):
         # string templating
         col_fspaths = {}
         for cell in entry.row.cells():
-            if cell.is_empty:
-                cell_uri = self.fileset_uri(cell.column.path, cell.datatype, entry.row)
-            else:
-                cell_uri = cell.entry.uri
-            try:
-                col_fspaths[cell.column.name] = Path(cell_uri).relative_to(
-                    self._rel_row_path(entry.row)
-                )
-            except ValueError:
-                pass
+            if is_fileset_or_union(cell.datatype):
+                if cell.is_empty:
+                    cell_uri = self.fileset_uri(
+                        cell.column.path, cell.datatype, entry.row
+                    )
+                else:
+                    cell_uri = cell.entry.uri
+                try:
+                    col_fspaths[cell.column.name] = Path(cell_uri).relative_to(
+                        self._rel_row_path(entry.row)
+                    )
+                except ValueError:
+                    pass
         for jedit in self.json_edits:
             jq_expr = jedit.jq_expr.format(**col_fspaths)  # subst col file paths
             if re.match(jedit.path, entry.path):
@@ -460,7 +467,9 @@ class Bids(LocalStore):
             json.dump(json_dict, f)
 
     @classmethod
-    def _extract_entities(cls, relpath: Path) -> ty.Tuple[str, ty.List[str], str]:
+    def _extract_entities(
+        cls, relpath: Path
+    ) -> ty.Tuple[str, ty.List[ty.Tuple[str, ...]], str]:
         relpath = Path(relpath)
         path = relpath.parent
         name_parts = relpath.name.split(".")
@@ -487,7 +496,13 @@ class Bids(LocalStore):
             the "path" of an entry relative to the subject/session row.
         """
         entry_path, entities, suffix = cls._extract_entities(relpath)
-        for key, val in entities:
+        for entity in entities:
+            try:
+                key, val = entity
+            except ValueError as e:
+                raise FrameTreeUsageError(
+                    f"Invalid entity {entity!r} in path '{relpath}'"
+                ) from e
             if key not in ("sub", "ses"):
                 entry_path += f"/{key}={val}"
         return entry_path + "/" + suffix
