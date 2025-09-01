@@ -12,7 +12,7 @@ import pytest
 import docker
 from fileformats.medimage import NiftiX
 from frametree.core import __version__
-from frametree.common import Clinical
+from frametree.axes.medimage import MedImage
 from frametree.bids.store import Bids
 
 
@@ -30,7 +30,7 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
     dataset = Bids().create_dataset(
         id=path,
         name=dataset_name,
-        axes=Clinical,
+        axes=MedImage,
         hierarchy=["group", "subject", "visit"],
         leaves=[
             (group, f"{group}{member}", visit)
@@ -190,7 +190,9 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
     name = "bids-dataset"
 
     shutil.rmtree(path, ignore_errors=True)
-    dataset = Bids(json_edits=[(bp.path_re, bp.jq_script)],).create_dataset(
+    dataset = Bids(
+        json_edits=[(bp.path_re, bp.jq_script)],
+    ).create_dataset(
         id=path,
         name=name,
         leaves=[("1",)],

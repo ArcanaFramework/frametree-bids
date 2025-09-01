@@ -15,7 +15,7 @@ from pydra.utils.typing import is_fileset_or_union
 from frametree.core.exceptions import FrameTreeUsageError
 from frametree.core.tree import DataTree
 from frametree.core.frameset import FrameSet
-from frametree.common import Clinical
+from frametree.axes.medimage import MedImage
 from frametree.core.entry import DataEntry
 from frametree.core.row import DataRow
 
@@ -69,7 +69,7 @@ class Bids(LocalStore):
     name: str = "bids"
 
     BIDS_VERSION = "1.0.1"
-    DEFAULT_AXES = Clinical
+    DEFAULT_AXES = MedImage
 
     PROV_SUFFIX = ".provenance"
     FIELDS_FNAME = "__fields__"
@@ -215,7 +215,7 @@ class Bids(LocalStore):
                     subject_id=row.frequency_id("subject"),
                     visit_id=(
                         row.frequency_id("visit")
-                        if Clinical.visit in row.frameset.hierarchy
+                        if MedImage.visit in row.frameset.hierarchy
                         else None
                     ),
                 )
@@ -330,7 +330,7 @@ class Bids(LocalStore):
         id: str,
         leaves: ty.List[ty.Tuple[str, ...]],
         hierarchy: ty.List[str] = ["session"],
-        axes: type = Clinical,
+        axes: type = MedImage,
         name: ty.Optional[str] = None,
         **kwargs,
     ):

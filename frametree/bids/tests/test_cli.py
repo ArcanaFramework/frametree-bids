@@ -6,7 +6,7 @@
 #     TestDatasetBlueprint,
 #     FileSetEntryBlueprint as FileBP,
 # )
-# from frametree.common import Clinical
+# from frametree.axes.medimage import MedImage
 # from fileformats.medimage import NiftiGzX
 # from frametree.bids.cli import app_entrypoint
 # from frametree.core.serialize import ClassResolver
@@ -22,7 +22,7 @@
 # ):
 
 #     blueprint = TestDatasetBlueprint(
-#         axes=Clinical,
+#         axes=MedImage,
 #         hierarchy=["subject", "session"],
 #         dim_lengths=[1, 1, 1],
 #         entries=[
@@ -50,13 +50,13 @@
 #         derivatives=[
 #             FileBP(
 #                 path="file1",
-#                 row_frequency=Clinical.session,
+#                 row_frequency=MedImage.session,
 #                 datatype=Text,
 #                 filenames=["file1.txt"],
 #             ),
 #             FileBP(
 #                 path="file2",
-#                 row_frequency=Clinical.session,
+#                 row_frequency=MedImage.session,
 #                 datatype=Text,
 #                 filenames=["file2.txt"],
 #             ),
@@ -121,7 +121,7 @@
 #         },
 #         command={
 #             "task": "frametree.bids.tasks:bids_app",
-#             "row_frequency": "medimage:Clinical[session]",
+#             "operates_on": "medimage/session",
 #             "inputs": inputs_config,
 #             "outputs": outputs_config,
 #             "configuration": {
