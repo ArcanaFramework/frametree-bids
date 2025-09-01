@@ -9,7 +9,7 @@ import numpy.random
 import shutil
 from dataclasses import dataclass
 import pytest
-import docker
+import docker.errors
 from fileformats.medimage import NiftiX
 from frametree.core import __version__
 from frametree.axes.medimage import MedImage
@@ -79,7 +79,7 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
     )
 
     with open(dummy_json, "w") as f:
-        json.dump({"test": "json-file"}, f)
+        json.dump({"test": "json-file", "SkullStripped": False}, f)
 
     for row in dataset.rows(frequency="session"):
         row["t1w"] = (dummy_nifti, dummy_json)
@@ -90,14 +90,21 @@ def test_bids_roundtrip(bids_validator_docker, bids_success_str, work_dir):
         dc.images.pull(bids_validator_docker)
     except requests.exceptions.HTTPError:
         warn("No internet connection, so couldn't download latest BIDS validator")
-    result = dc.containers.run(
+    container = dc.containers.create(
         bids_validator_docker,
-        "/data",
+        command="/data",
         volumes=[f"{path}:/data:ro"],
-        remove=True,
-        stderr=True,
-    ).decode("utf-8")
-    assert bids_success_str in result
+        detach=False,
+    )
+    try:
+        container.start()
+        result = container.wait()
+        logs = container.logs(stdout=True, stderr=True)
+    finally:
+        container.remove(force=True)
+    assert (
+        result["StatusCode"] == 0
+    ), f"BIDS validator failed with exit code {result['StatusCode']}, logs:\n{logs.decode()}"
 
     reloaded = Bids().load_frameset(id=path, name=dataset_name)
     reloaded.add_sink(
