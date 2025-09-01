@@ -234,7 +234,7 @@ def bids_command_spec(mock_bids_app_executable):
         "task": "frametree.bids.tasks:bids_app",
         "inputs": inputs,
         "outputs": outputs,
-        "row_frequency": "session",
+        "operates_on": "session",
         "configuration": {
             "inputs": inputs,
             "outputs": outputs,
