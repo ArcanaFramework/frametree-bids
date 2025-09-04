@@ -187,62 +187,6 @@ ENTRYPOINT ["/launch.sh"]"""
     return tag_name
 
 
-@pytest.fixture(scope="session")
-def bids_command_spec(mock_bids_app_executable):
-    inputs = {
-        "T1w": {
-            "configuration": {
-                "path": "anat/T1w",
-            },
-            "datatype": "medimage:NiftiGzX",
-            "help": "T1-weighted image",
-        },
-        "T2w": {
-            "configuration": {
-                "path": "anat/T2w",
-            },
-            "datatype": "medimage:NiftiGzX",
-            "help": "T2-weighted image",
-        },
-        "DWI": {
-            "configuration": {
-                "path": "dwi/dwi",
-            },
-            "datatype": "medimage:NiftiGzXBvec",
-            "help": "DWI-weighted image",
-        },
-    }
-
-    outputs = {
-        "file1": {
-            "configuration": {
-                "path": "file1",
-            },
-            "datatype": "common:Text",
-            "help": "an output file",
-        },
-        "file2": {
-            "configuration": {
-                "path": "file2",
-            },
-            "datatype": "common:Text",
-            "help": "another output file",
-        },
-    }
-
-    return {
-        "task": "frametree.bids.tasks:bids_app",
-        "inputs": inputs,
-        "outputs": outputs,
-        "operates_on": "session",
-        "configuration": {
-            "inputs": inputs,
-            "outputs": outputs,
-            "executable": str(mock_bids_app_executable),
-        },
-    }
-
-
 # For debugging in IDE's don't catch raised exceptions and let the IDE
 # break at it
 if os.getenv("_PYTEST_RAISE", "0") != "0":
