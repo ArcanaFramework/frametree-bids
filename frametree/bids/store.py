@@ -8,7 +8,7 @@ import attrs
 import jq
 from pathlib import Path
 from frametree.core.store import LocalStore
-from fileformats.core import FileSet, Field
+from fileformats.core import FileSet, Field, FileSetPrimitive, FieldPrimitive
 from fileformats.generic import Directory
 from fileformats.medimage.nifti import WithBids, NiftiGzX
 from pydra.utils.typing import is_fileset_or_union
@@ -134,7 +134,7 @@ class Bids(LocalStore):
                 # suffix = "".join(entry_fspath.suffixes)
                 path = self._fs2entry_path(entry_fspath.relative_to(session_path))
                 # path = path.split(".")[0] + "/" + suffix.lstrip(".")
-                row.add_entry(
+                row.found_entry(
                     path=path,
                     datatype=FileSet,
                     uri=str(entry_fspath.relative_to(root_dir)),
@@ -145,7 +145,7 @@ class Bids(LocalStore):
                 pipeline_row_dir = pipeline_dir / relpath
                 if pipeline_row_dir.exists():
                     # Add in the whole row directory as an entry
-                    row.add_entry(
+                    row.found_entry(
                         path="@" + pipeline_dir.name,
                         datatype=Directory,
                         uri=pipeline_row_dir.relative_to(root_dir),
@@ -164,7 +164,7 @@ class Bids(LocalStore):
                             )
                             # suffix = "".join(entry_fspath.suffixes)
                             # path = path[: -len(suffix)] + "/" + suffix.lstrip(".")
-                            row.add_entry(
+                            row.found_entry(
                                 path=path,
                                 datatype=FileSet,
                                 uri=str(entry_fspath.relative_to(root_dir)),
@@ -223,8 +223,8 @@ class Bids(LocalStore):
             + f"::{field_name}"
         )
 
-    def get_fileset(self, entry: DataEntry, datatype: type) -> FileSet:
-        return datatype(self._fileset_fspath(entry))
+    def get_fileset(self, entry: DataEntry, datatype: type) -> FileSetPrimitive:
+        return self._fileset_fspath(entry)
 
     def put_fileset(self, fileset: FileSet, entry: DataEntry) -> FileSet:
         """
@@ -244,9 +244,9 @@ class Bids(LocalStore):
             self._edit_nifti_x(copied_fileset, entry)
         return copied_fileset
 
-    def get_field(self, entry: DataEntry, datatype: type) -> Field:
+    def get_field(self, entry: DataEntry, datatype: type) -> FieldPrimitive:
         fspath, key = self._fields_fspath_and_key(entry)
-        return datatype(self.read_from_json(fspath, key))
+        return self.read_from_json(fspath, key)
 
     def put_field(self, field: Field, entry: DataEntry):
         """
