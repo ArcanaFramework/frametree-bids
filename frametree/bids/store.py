@@ -35,9 +35,11 @@ class JsonEdit:
     # i.e. '{{' and '}}').
 
     @classmethod
-    def attr_converter(cls, json_edits: list) -> list:
+    def attr_converter(cls, json_edits: list[tuple[str, str]] | dict[str, str]) -> list:
         if json_edits is None or json_edits is attrs.NOTHING:
             return []
+        if isinstance(json_edits, dict):
+            json_edits = list(json_edits.items())
         parsed = []
         for x in json_edits:
             if isinstance(x, JsonEdit):
@@ -62,7 +64,7 @@ class Bids(LocalStore):
         EDIT_STR - jq filter used to modify the JSON document.
     """
 
-    json_edits: ty.List[JsonEdit] = attrs.field(
+    json_edits: list[JsonEdit] = attrs.field(
         factory=list, converter=JsonEdit.attr_converter
     )
 
