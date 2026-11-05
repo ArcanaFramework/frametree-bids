@@ -10,7 +10,10 @@ import shutil
 from dataclasses import dataclass
 import pytest
 import docker.errors
+from fileformats.application import Json
+from fileformats.generic import Directory
 from fileformats.medimage import NiftiX
+from fileformats.text import Plain as Text
 from frametree.core import __version__
 from frametree.axes.medimage import MedImage
 from frametree.bids.store import Bids
@@ -253,3 +256,85 @@ def test_bids_json_edit(json_edit_blueprint: JsonEditBlueprint, work_dir: Path):
             saved_dict = json.load(f)
 
         assert saved_dict == sf_bp.edited_side_car
+
+
+@pytest.fixture
+def derivatives_dataset(work_dir: Path):
+    """A BIDS dataset with a derivative laid out like the output of a BIDS app"""
+    dataset = Bids().create_dataset(
+        id=work_dir / "bids-dataset",
+        name="adataset",
+        leaves=[("1",)],
+        metadata={"authors": MOCK_AUTHORS},
+    )
+    subject_dir = Path(dataset.id) / "derivatives" / "app" / "sub-1"
+    (subject_dir / "anat").mkdir(parents=True)
+    for fname in (
+        "sub-1_file1.txt",
+        "anat/sub-1_T2w.txt",
+        "anat/sub-1_desc-brain_mask.txt",
+    ):
+        (subject_dir / fname).write_text(fname)
+    return dataset
+
+
+@pytest.mark.parametrize(
+    "path,datatype,expected",
+    [
+        ("file1", Text, "sub-1_file1.txt"),
+        ("anat", Directory, "anat"),
+        ("anat/T2w", Text, "anat/sub-1_T2w.txt"),
+        ("anat/mask/desc=brain", Text, "anat/sub-1_desc-brain_mask.txt"),
+    ],
+)
+def test_bids_derivative_paths(
+    derivatives_dataset, path: str, datatype: type, expected: str
+):
+    derivatives_dataset.add_sink("output", datatype, path=f"{path}@app")
+    row = derivatives_dataset.row(MedImage.session, "1")
+    with derivatives_dataset.store.connection:
+        item = row["output"]
+    subject_dir = Path(derivatives_dataset.id) / "derivatives" / "app" / "sub-1"
+    assert Path(str(item)) == subject_dir / expected
+
+
+def test_bids_derivative_directory_with_nested_directory(derivatives_dataset):
+    """A nested directory doesn't make its parent directory's path ambiguous"""
+    subject_dir = Path(derivatives_dataset.id) / "derivatives" / "app" / "sub-1"
+    (subject_dir / "log" / "20260101-000000_abcd").mkdir(parents=True)
+    derivatives_dataset.add_sink("output", Directory, path="log@app")
+    row = derivatives_dataset.row(MedImage.session, "1")
+    with derivatives_dataset.store.connection:
+        item = row["output"]
+    assert Path(str(item)) == subject_dir / "log"
+
+
+def test_bids_derivative_non_bids_nested_file(derivatives_dataset):
+    """Files in sub-directories that don't follow BIDS naming are skipped, not fatal"""
+    subject_dir = Path(derivatives_dataset.id) / "derivatives" / "app" / "sub-1"
+    (subject_dir / "anat" / "not_a-valid-entity_name.txt").write_text("")
+    derivatives_dataset.add_sink("output", Text, path="anat/T2w@app")
+    row = derivatives_dataset.row(MedImage.session, "1")
+    with derivatives_dataset.store.connection:
+        item = row["output"]
+    assert Path(str(item)) == subject_dir / "anat" / "sub-1_T2w.txt"
+
+
+def test_bids_derivative_nested_roundtrip(work_dir: Path):
+    """A derivative written to a sub-directory can be read back from a fresh load"""
+    path = work_dir / "bids-dataset"
+    dataset = Bids().create_dataset(
+        id=path, name="adataset", leaves=[("1",)], metadata={"authors": MOCK_AUTHORS}
+    )
+    dataset.add_sink("output", Json, path="anat/T2w@app")
+    source = work_dir / "source.json"
+    source.write_text('{"a": 1}')
+    dataset["output"]["1"] = source
+
+    reloaded = Bids().load_frameset(id=path, name="adataset")
+    reloaded.add_sink("output", Json, path="anat/T2w@app")
+    row = reloaded.row(MedImage.session, "1")
+    with reloaded.store.connection:
+        item = row["output"]
+    assert Path(str(item)).parts[-3:] == ("sub-1", "anat", "sub-1_T2w.json")
+    assert Path(str(item)).read_text() == '{"a": 1}'

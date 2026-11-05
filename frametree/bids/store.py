@@ -153,24 +153,46 @@ class Bids(LocalStore):
                         uri=pipeline_row_dir.relative_to(root_dir),
                     )
                     for entry_fspath in pipeline_row_dir.iterdir():
-                        if not (
-                            entry_fspath.name.startswith(".")
-                            or entry_fspath.name
-                            in (self.FIELDS_FNAME, self.FIELDS_PROV_FNAME)
-                            or entry_fspath.name.endswith(self.PROV_SUFFIX)
-                        ):
-                            path = (
-                                self._fs2entry_path(entry_fspath.name)
-                                + "@"
-                                + pipeline_dir.name
-                            )
-                            # suffix = "".join(entry_fspath.suffixes)
-                            # path = path[: -len(suffix)] + "/" + suffix.lstrip(".")
-                            row.found_entry(
-                                path=path,
-                                datatype=FileSet,
-                                uri=str(entry_fspath.relative_to(root_dir)),
-                            )
+                        if self._is_internal_file(entry_fspath):
+                            continue
+                        path = (
+                            self._fs2entry_path(entry_fspath.name)
+                            + "@"
+                            + pipeline_dir.name
+                        )
+                        # suffix = "".join(entry_fspath.suffixes)
+                        # path = path[: -len(suffix)] + "/" + suffix.lstrip(".")
+                        row.found_entry(
+                            path=path,
+                            datatype=FileSet,
+                            uri=str(entry_fspath.relative_to(root_dir)),
+                        )
+                        if entry_fspath.is_dir():
+                            # Also add the contents of sub-directories, as derivatives
+                            # mirror the BIDS layout (e.g. anat/T1w)
+                            for nested_fspath in entry_fspath.iterdir():
+                                # Nested directories are left out so they don't make
+                                # the path of their parent directory ambiguous
+                                if nested_fspath.is_dir() or self._is_internal_file(
+                                    nested_fspath
+                                ):
+                                    continue
+                                try:
+                                    path = self._fs2entry_path(
+                                        nested_fspath.relative_to(pipeline_row_dir)
+                                    )
+                                except FrameTreeUsageError:
+                                    # Apps can write arbitrary files to sub-directories,
+                                    # which are still available via the directory itself
+                                    logger.debug(
+                                        "Skipping non-BIDS path '%s'", nested_fspath
+                                    )
+                                    continue
+                                row.found_entry(
+                                    path=path + "@" + pipeline_dir.name,
+                                    datatype=FileSet,
+                                    uri=str(nested_fspath.relative_to(root_dir)),
+                                )
 
     def fileset_uri(self, path: str, datatype: type, row: DataRow) -> str:
         path, dataset_name = DataEntry.split_dataset_name_from_path(path)
@@ -180,8 +202,9 @@ class Bids(LocalStore):
             base_uri = f"derivatives/{self.EMPTY_DATASET_NAME}"
         else:
             base_uri = f"derivatives/{dataset_name}"
-        return base_uri + str(
-            self._entry2fs_path(
+        return str(
+            Path(base_uri)
+            / self._entry2fs_path(
                 path,
                 subject_id=row.frequency_id("subject"),
                 visit_id=(
@@ -410,6 +433,15 @@ class Bids(LocalStore):
             with open(dataset.root_dir / "participants.json", "w") as f:
                 json.dump(participants_desc, f)
 
+    def _is_internal_file(self, fspath: Path) -> bool:
+        """Whether a file in a derivatives directory is hidden or holds the fields or
+        provenance saved by the store, and therefore isn't a data entry"""
+        return (
+            fspath.name.startswith(".")
+            or fspath.name in (self.FIELDS_FNAME, self.FIELDS_PROV_FNAME)
+            or fspath.name.endswith(self.PROV_SUFFIX)
+        )
+
     def _fileset_fspath(self, entry: DataEntry) -> Path:
         return Path(entry.row.frameset.id) / entry.uri
 
@@ -480,7 +512,7 @@ class Bids(LocalStore):
         parts = stem.split("_")
         path /= parts[-1]
         entities = sorted((tuple(p.split("-")) for p in parts[:-1]), key=itemgetter(0))
-        return str(path), entities, suffix
+        return path.as_posix(), entities, suffix
 
     @classmethod
     def _fs2entry_path(cls, relpath: Path) -> str:
